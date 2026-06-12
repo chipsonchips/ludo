@@ -64,10 +64,10 @@ function cellStyle(code: RenderCell['code']): { color: string; height: number; y
 }
 
 function BOARD_CORNER_COLOR(row: number, col: number): LudoColor {
-  if (row < 6 && col < 6) return 'yellow';
-  if (row < 6 && col > 8) return 'blue';
-  if (row > 8 && col < 6) return 'green';
-  return 'red';
+  if (row > 8 && col < 6) return 'red'; // Top-Left visual
+  if (row > 8 && col > 8) return 'green'; // Top-Right visual
+  if (row < 6 && col < 6) return 'blue'; // Bottom-Left visual
+  return 'yellow'; // Bottom-Right visual
 }
 
 function BoardCellMesh({ row, col, code }: RenderCell) {
