@@ -5,12 +5,12 @@ import { RapierRigidBody, CuboidCollider, RigidBody } from '@react-three/rapier'
 import * as THREE from 'three';
 
 const PIP_POSITIONS: Record<number, [number, number, number][]> = {
-  1: [[0, 0, 0.26]],
-  2: [[-0.12, 0.12, 0.26], [0.12, -0.12, 0.26]],
-  3: [[-0.12, 0.12, 0.26], [0, 0, 0.26], [0.12, -0.12, 0.26]],
-  4: [[-0.12, 0.12, 0.26], [0.12, 0.12, 0.26], [-0.12, -0.12, 0.26], [0.12, -0.12, 0.26]],
-  5: [[-0.12, 0.12, 0.26], [0.12, 0.12, 0.26], [0, 0, 0.26], [-0.12, -0.12, 0.26], [0.12, -0.12, 0.26]],
-  6: [[-0.12, 0.12, 0.26], [0.12, 0.12, 0.26], [-0.12, 0, 0.26], [0.12, 0, 0.26], [-0.12, -0.12, 0.26], [0.12, -0.12, 0.26]],
+  1: [[0, 0, 0]],
+  2: [[-0.12, 0.12, 0], [0.12, -0.12, 0]],
+  3: [[-0.12, 0.12, 0], [0, 0, 0], [0.12, -0.12, 0]],
+  4: [[-0.12, 0.12, 0], [0.12, 0.12, 0], [-0.12, -0.12, 0], [0.12, -0.12, 0]],
+  5: [[-0.12, 0.12, 0], [0.12, 0.12, 0], [0, 0, 0], [-0.12, -0.12, 0], [0.12, -0.12, 0]],
+  6: [[-0.12, 0.14, 0], [0.12, 0.14, 0], [-0.12, 0, 0], [0.12, 0, 0], [-0.12, -0.14, 0], [0.12, -0.14, 0]],
 };
 
 function PipFace({ value, position, rotation }: { value: number; position: [number, number, number]; rotation: [number, number, number] }) {
@@ -19,8 +19,8 @@ function PipFace({ value, position, rotation }: { value: number; position: [numb
     <group position={position} rotation={rotation}>
       {pips.map((p, i) => (
         <mesh key={i} position={p}>
-          <sphereGeometry args={[0.045, 8, 8]} />
-          <meshStandardMaterial color="#1a1a2e" roughness={0.3} />
+          <circleGeometry args={[value === 1 ? 0.065 : 0.045, 32]} />
+          <meshStandardMaterial color="#1a1a2e" roughness={0.8} />
         </mesh>
       ))}
     </group>
@@ -49,12 +49,12 @@ export function DiceMesh({ position, impulse, torque, onSettle, color = '#f8f8ff
 
   const faceRotations: { value: number; position: [number, number, number]; rotation: [number, number, number] }[] = useMemo(
     () => [
-      { value: 1, position: [0, 0, 0.26], rotation: [0, 0, 0] },
-      { value: 6, position: [0, 0, -0.26], rotation: [Math.PI, 0, 0] },
-      { value: 2, position: [0.26, 0, 0], rotation: [0, Math.PI / 2, 0] },
-      { value: 5, position: [-0.26, 0, 0], rotation: [0, -Math.PI / 2, 0] },
-      { value: 3, position: [0, 0.26, 0], rotation: [-Math.PI / 2, 0, 0] },
-      { value: 4, position: [0, -0.26, 0], rotation: [Math.PI / 2, 0, 0] },
+      { value: 1, position: [0, 0, 0.251], rotation: [0, 0, 0] },
+      { value: 6, position: [0, 0, -0.251], rotation: [Math.PI, 0, 0] },
+      { value: 2, position: [0.251, 0, 0], rotation: [0, Math.PI / 2, 0] },
+      { value: 5, position: [-0.251, 0, 0], rotation: [0, -Math.PI / 2, 0] },
+      { value: 3, position: [0, 0.251, 0], rotation: [-Math.PI / 2, 0, 0] },
+      { value: 4, position: [0, -0.251, 0], rotation: [Math.PI / 2, 0, 0] },
     ],
     []
   );
