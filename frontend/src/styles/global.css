@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Orbitron', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --color-game-bg: #0a0a12;
+  --color-game-surface: #12121f;
+  --color-game-glass: rgba(18, 18, 31, 0.75);
+  --color-game-muted: #5c5c6e;
+  --color-game-secondary: #9898a8;
+  --color-game-primary: #f0f0f5;
+  --color-game-gold: #f59e0b;
+  --color-game-blue: #3b82f6;
+  --color-game-purple: #8b5cf6;
+  --color-game-green: #22c55e;
+  --color-game-red: #ef4444;
+
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    @apply h-full w-full overflow-hidden antialiased;
+    background-color: var(--color-game-bg);
+    color: var(--color-game-primary);
+    font-family: var(--font-body);
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  input {
+    font-family: inherit;
+    outline: none;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply rounded-xl border border-white/10 backdrop-blur-xl;
+    background: var(--color-game-glass);
+  }
+}
