@@ -10,14 +10,14 @@
 
 ## Overview
 
-StellarDice lets players wager XLM (or any Stellar asset) on the outcome of a dice roll. Every roll is verifiable on-chain using a commit-reveal scheme, eliminating any possibility of house manipulation. The smart contract logic is implemented as a Stellar Soroban smart contract, and the frontend is a lightweight React app that connects via Freighter or any WalletConnect-compatible Stellar wallet.
+StellarDice lets players wager USDC on the outcome of a dice roll. Every roll is verifiable on-chain using a commit-reveal scheme, eliminating any possibility of house manipulation. The smart contract logic is implemented as a Stellar Soroban smart contract, and the frontend is a lightweight React app that connects via Freighter or any WalletConnect-compatible Stellar wallet.
 
 ---
 
 ## Features
 
 - 🎲 **1–6 dice roll** with configurable bet multipliers
-- 💸 **Bet in XLM** or whitelisted Stellar assets
+- 💸 **Bet in USDC** or whitelisted Stellar assets
 - 🔐 **Provably fair** via commit-reveal randomness (VRF)
 - 🏦 **Non-custodial** — funds move directly on-chain
 - 📊 **Live leaderboard** and on-chain history
@@ -133,4 +133,4 @@ We welcome contributions of all kinds. See [CONTRIBUTING.md](./CONTRIBUTING.md) 
 
 ## License
 
-MIT © 2025 StellarDice Contributors
+MIT © 2026 StellarDice Contributors
