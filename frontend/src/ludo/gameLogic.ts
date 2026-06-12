@@ -38,6 +38,7 @@ export interface MoveOption {
   tokenId: string;
   newLocation: TokenLocation;
   capture?: LudoToken;
+  dieValueUsed: number;
 }
 
 function simulateTrackMove(
@@ -55,9 +56,9 @@ function simulateTrackMove(
       const homeIndex = steps - stepsToHomeEntry;
       if (homeIndex > HOME_PATHS[token.color].length) return null;
       if (homeIndex === HOME_PATHS[token.color].length) {
-        return { tokenId: token.id, newLocation: { kind: 'finished' } };
+        return { tokenId: token.id, newLocation: { kind: 'finished' }, dieValueUsed: steps };
       }
-      return { tokenId: token.id, newLocation: { kind: 'home', index: homeIndex } };
+      return { tokenId: token.id, newLocation: { kind: 'home', index: homeIndex }, dieValueUsed: steps };
     }
 
     const newIndex = current + steps;
@@ -69,13 +70,14 @@ function simulateTrackMove(
       tokenId: token.id,
       newLocation: { kind: 'track', index: newIndex },
       capture,
+      dieValueUsed: steps,
     };
   }
 
   if (token.location.kind === 'home') {
     const newHomeIndex = token.location.index + steps;
     if (newHomeIndex >= HOME_PATHS[token.color].length) return null;
-    return { tokenId: token.id, newLocation: { kind: 'home', index: newHomeIndex } };
+    return { tokenId: token.id, newLocation: { kind: 'home', index: newHomeIndex }, dieValueUsed: steps };
   }
 
   return null;
@@ -85,41 +87,46 @@ function simulateHomeToFinish(token: LudoToken, steps: number): MoveOption | nul
   if (token.location.kind !== 'home') return null;
   const target = token.location.index + steps;
   if (target === HOME_PATHS[token.color].length) {
-    return { tokenId: token.id, newLocation: { kind: 'finished' } };
+    return { tokenId: token.id, newLocation: { kind: 'finished' }, dieValueUsed: steps };
   }
   if (target > HOME_PATHS[token.color].length) return null;
-  return { tokenId: token.id, newLocation: { kind: 'home', index: target } };
+  return { tokenId: token.id, newLocation: { kind: 'home', index: target }, dieValueUsed: steps };
 }
 
-export function getLegalMoves(state: LudoState, dice: number): MoveOption[] {
+export function getLegalMoves(state: LudoState): MoveOption[] {
   const color = state.players[state.currentPlayerIndex].color;
   const playerTokens = state.tokens.filter((t) => t.color === color && t.location.kind !== 'finished');
   const moves: MoveOption[] = [];
 
-  for (const token of playerTokens) {
-    if (token.location.kind === 'base') {
-      if (dice === 6) {
-        const startGlobal = globalTrackIndex(color, 0);
-        if (canLandOn(state, color, startGlobal, token.id)) {
-          const capture = tokensAtTrackCell(state, startGlobal, token.id).find((t) => t.color !== color);
-          moves.push({
-            tokenId: token.id,
-            newLocation: { kind: 'track', index: 0 },
-            capture,
-          });
+  const uniqueDice = Array.from(new Set(state.diceValues)).sort((a, b) => b - a);
+
+  for (const dice of uniqueDice) {
+    for (const token of playerTokens) {
+      if (token.location.kind === 'base') {
+        if (dice === 6) {
+          const startGlobal = globalTrackIndex(color, 0);
+          if (canLandOn(state, color, startGlobal, token.id)) {
+            const capture = tokensAtTrackCell(state, startGlobal, token.id).find((t) => t.color !== color);
+            moves.push({
+              tokenId: token.id,
+              newLocation: { kind: 'track', index: 0 },
+              capture,
+              dieValueUsed: dice,
+            });
+          }
         }
+        continue;
       }
-      continue;
-    }
 
-    if (token.location.kind === 'home') {
-      const m = simulateHomeToFinish(token, dice);
+      if (token.location.kind === 'home') {
+        const m = simulateHomeToFinish(token, dice);
+        if (m) moves.push(m);
+        continue;
+      }
+
+      const m = simulateTrackMove(state, token, dice);
       if (m) moves.push(m);
-      continue;
     }
-
-    const m = simulateTrackMove(state, token, dice);
-    if (m) moves.push(m);
   }
 
   return moves;
@@ -138,6 +145,10 @@ export function applyMove(state: LudoState, move: MoveOption): LudoState {
     );
   }
 
+  const newDiceValues = [...state.diceValues];
+  const usedIdx = newDiceValues.indexOf(move.dieValueUsed);
+  if (usedIdx !== -1) newDiceValues.splice(usedIdx, 1);
+
   const color = state.players[state.currentPlayerIndex].color;
   const finishedCount = tokens.filter((t) => t.color === color && t.location.kind === 'finished').length;
 
@@ -148,13 +159,23 @@ export function applyMove(state: LudoState, move: MoveOption): LudoState {
   }));
 
   const allFinished = finishedCount === 4;
-  const rolledSix = state.diceValue === 6;
-  const extraTurn = rolledSix && !allFinished;
-  const nextIndex = extraTurn
-    ? state.currentPlayerIndex
-    : (state.currentPlayerIndex + 1) % state.players.length;
+  const turnContinues = newDiceValues.length > 0 && !allFinished;
 
-  if (!allFinished) {
+  let nextIndex = state.currentPlayerIndex;
+  let nextPhase = 'select_token';
+
+  if (allFinished) {
+    nextPhase = 'game_over';
+  } else if (!turnContinues) {
+    if (state.extraTurn) {
+      nextPhase = 'roll';
+      players[nextIndex].isCurrentTurn = true;
+    } else {
+      nextPhase = 'roll';
+      nextIndex = (state.currentPlayerIndex + 1) % state.players.length;
+      players[nextIndex].isCurrentTurn = true;
+    }
+  } else {
     players[nextIndex].isCurrentTurn = true;
   }
 
@@ -164,20 +185,22 @@ export function applyMove(state: LudoState, move: MoveOption): LudoState {
     ...state,
     tokens,
     players,
-    currentPlayerIndex: allFinished ? state.currentPlayerIndex : nextIndex,
-    phase: allFinished ? 'game_over' : 'roll',
-    diceValue: null,
+    currentPlayerIndex: nextIndex,
+    phase: nextPhase as any,
+    diceValues: newDiceValues,
     isRolling: false,
-    extraTurn,
+    extraTurn: !turnContinues ? false : state.extraTurn,
     selectableTokenIds: [],
     winnerId: winner,
     message: allFinished
       ? `${state.players[state.currentPlayerIndex].username} wins!`
       : move.capture
         ? `Captured ${move.capture.color} token!`
-        : rolledSix
-          ? 'Rolled a 6 — bonus turn!'
-          : '',
+        : turnContinues
+          ? `Moved! ${newDiceValues.length} move(s) left.`
+          : state.extraTurn
+            ? 'Bonus turn!'
+            : '',
   };
 }
 
@@ -210,12 +233,12 @@ export function createInitialLudoState(
     tokens,
     currentPlayerIndex: 0,
     phase: 'roll',
-    diceValue: null,
+    diceValues: [],
     isRolling: false,
     extraTurn: false,
     selectableTokenIds: [],
     winnerId: null,
-    message: 'Roll a 6 to bring a token out!',
+    message: 'Roll to bring a token out!',
   };
 }
 
