@@ -11,15 +11,15 @@ export const LUDO_COLORS: Record<LudoColor, { hex: string; dark: string; label: 
   red: { hex: '#C62828', dark: '#B71C1C', label: 'Red' },
 };
 
-export const PLAYER_ORDER: LudoColor[] = ['yellow', 'blue', 'red', 'green'];
+export const PLAYER_ORDER: LudoColor[] = ['red', 'green', 'yellow', 'blue'];
 
 export { MAIN_PATH, HOME_PATHS, BOARD_GRID };
 
 export const START_INDEX: Record<LudoColor, number> = {
-  yellow: 0,
-  blue: 13,
-  red: 26,
-  green: 39,
+  red: 1,
+  green: 14,
+  yellow: 27,
+  blue: 40,
 };
 
 export const SAFE_TRACK_INDICES = SAFE_INDICES;
@@ -32,10 +32,10 @@ export const BASE_SLOTS: Record<LudoColor, [number, number][]> = {
 };
 
 export const CENTER_CELLS: Record<LudoColor, [number, number]> = {
-  yellow: [6, 7],
-  blue: [7, 8],
-  red: [8, 7],
-  green: [7, 6],
+  green: [8, 7],
+  yellow: [7, 8],
+  blue: [6, 7],
+  red: [7, 6],
 };
 
 /** Board center for dice rolling arena */
