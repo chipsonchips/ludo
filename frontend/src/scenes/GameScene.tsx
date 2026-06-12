@@ -63,44 +63,61 @@ function CenterDiceArena({
   onRollComplete,
 }: {
   isRolling: boolean;
-  onRollComplete: (value: number) => void;
+  onRollComplete: (values: number[]) => void;
 }) {
   const [diceKey, setDiceKey] = useState(0);
   const [showDice, setShowDice] = useState(false);
-  const [impulse, setImpulse] = useState<[number, number, number] | undefined>();
-  const [torque, setTorque] = useState<[number, number, number] | undefined>();
-  const settled = useRef(false);
+  const [impulse1, setImpulse1] = useState<[number, number, number] | undefined>();
+  const [impulse2, setImpulse2] = useState<[number, number, number] | undefined>();
+  const [torque1, setTorque1] = useState<[number, number, number] | undefined>();
+  const [torque2, setTorque2] = useState<[number, number, number] | undefined>();
+  const settledValues = useRef<number[]>([]);
   const { play } = useSound();
 
   const handleRoll = useCallback(() => {
     if (!isRolling) return;
-    settled.current = false;
+    settledValues.current = [];
     setShowDice(true);
     setDiceKey((k) => k + 1);
-    setImpulse([
-      (Math.random() - 0.5) * 0.3,
+    setImpulse1([
+      (Math.random() - 0.5) * 0.2,
       0.6 + Math.random() * 0.4,
-      (Math.random() - 0.5) * 0.3,
+      (Math.random() - 0.5) * 0.2,
     ]);
-    setTorque([
+    setImpulse2([
+      (Math.random() - 0.5) * 0.2,
+      0.6 + Math.random() * 0.4,
+      (Math.random() - 0.5) * 0.2,
+    ]);
+    setTorque1([
+      (Math.random() - 0.5) * 2,
+      (Math.random() - 0.5) * 2,
+      (Math.random() - 0.5) * 2,
+    ]);
+    setTorque2([
       (Math.random() - 0.5) * 2,
       (Math.random() - 0.5) * 2,
       (Math.random() - 0.5) * 2,
     ]);
     play('roll');
     setTimeout(() => {
-      setImpulse(undefined);
-      setTorque(undefined);
+      setImpulse1(undefined);
+      setImpulse2(undefined);
+      setTorque1(undefined);
+      setTorque2(undefined);
     }, 100);
   }, [isRolling, play]);
 
   const handleSettle = useCallback(
     (value: number) => {
-      if (settled.current) return;
-      settled.current = true;
+      if (settledValues.current.length >= 2) return;
+      settledValues.current.push(value);
       play('land');
-      onRollComplete(value);
-      setTimeout(() => setShowDice(false), 1800);
+      
+      if (settledValues.current.length === 2) {
+        onRollComplete([...settledValues.current]);
+        setTimeout(() => setShowDice(false), 1800);
+      }
     },
     [onRollComplete, play]
   );
@@ -112,14 +129,24 @@ function CenterDiceArena({
   return (
     <>
       {showDice && (
-        <DiceMesh
-          key={`die-${diceKey}`}
-          position={[BOARD_CENTER[0], 1.4, BOARD_CENTER[2]]}
-          impulse={impulse}
-          torque={torque}
-          onSettle={handleSettle}
-          color="#fffef9"
-        />
+        <>
+          <DiceMesh
+            key={`die1-${diceKey}`}
+            position={[BOARD_CENTER[0] - 0.15, 1.4, BOARD_CENTER[2]]}
+            impulse={impulse1}
+            torque={torque1}
+            onSettle={(v) => handleSettle(v, 0)}
+            color="#fffef9"
+          />
+          <DiceMesh
+            key={`die2-${diceKey}`}
+            position={[BOARD_CENTER[0] + 0.15, 1.4, BOARD_CENTER[2]]}
+            impulse={impulse2}
+            torque={torque2}
+            onSettle={(v) => handleSettle(v, 1)}
+            color="#fffef9"
+          />
+        </>
       )}
       {/* Physics collider for center dice arena */}
       <RigidBody type="fixed" colliders={false} position={BOARD_CENTER}>
@@ -140,9 +167,9 @@ export function GameScene() {
   const [particles, setParticles] = useState(false);
 
   const handleRollComplete = useCallback(
-    (value: number) => {
+    (values: number[]) => {
       setParticles(true);
-      completeRoll(value);
+      completeRoll(values);
       setTimeout(() => setParticles(false), 2000);
     },
     [completeRoll]
