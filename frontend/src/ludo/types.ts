@@ -29,7 +29,7 @@ export interface LudoState {
   tokens: LudoToken[];
   currentPlayerIndex: number;
   phase: LudoPhase;
-  diceValue: number | null;
+  diceValues: number[];
   isRolling: boolean;
   extraTurn: boolean;
   selectableTokenIds: string[];
