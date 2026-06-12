@@ -5,12 +5,12 @@ import { useSound } from '@/hooks/useSound';
 const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
 export function RollButton() {
-  const { isRolling, rollDice, ludo, lastDiceValue } = useGameStore();
+  const { isRolling, rollDice, ludo, lastDiceValues } = useGameStore();
   const { play } = useSound();
   const current = ludo.players[ludo.currentPlayerIndex];
   const isMyTurn = current.isLocalPlayer;
   const disabled = isRolling || !isMyTurn || ludo.phase !== 'roll' || !!ludo.winnerId;
-  const showResult = lastDiceValue !== null && !isRolling;
+  const showResult = lastDiceValues.length > 0 && !isRolling;
 
   const handleRoll = () => {
     if (disabled) return;
@@ -18,7 +18,7 @@ export function RollButton() {
     rollDice();
   };
 
-  const diceIcon = showResult && lastDiceValue ? DICE_FACES[lastDiceValue - 1] : '🎲';
+  const diceIcon = showResult ? lastDiceValues.map(v => DICE_FACES[v - 1]).join(' ') : '🎲';
 
   return (
     <div className="relative flex flex-col items-center gap-2">
@@ -34,27 +34,27 @@ export function RollButton() {
         <span className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent bg-[length:200%_100%]" />
         <AnimatePresence mode="wait">
           <motion.span
-            key={isRolling ? 'rolling' : showResult ? `result-${lastDiceValue}` : 'ready'}
+            key={isRolling ? 'rolling' : showResult ? `result-${lastDiceValues.join('-')}` : 'ready'}
             initial={{ scale: 0.5, opacity: 0, rotate: -90 }}
             animate={{ scale: 1, opacity: 1, rotate: 0 }}
             exit={{ scale: 0.3, opacity: 0, rotate: 90 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             className={`z-[1] drop-shadow-lg ${
               showResult && !isRolling
-                ? 'text-4xl md:text-5xl'
+                ? 'text-3xl md:text-4xl'
                 : 'text-[28px] md:text-4xl'
             }`}
           >
             {isRolling ? '🎲' : diceIcon}
           </motion.span>
         </AnimatePresence>
-        {showResult && lastDiceValue && (
+        {showResult && (
           <motion.span
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             className="z-[1] font-display text-lg font-black text-white drop-shadow-md md:text-xl"
           >
-            {lastDiceValue}
+            {lastDiceValues.join(' & ')}
           </motion.span>
         )}
         {!showResult && (
