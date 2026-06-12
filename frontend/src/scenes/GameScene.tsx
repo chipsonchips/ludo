@@ -78,14 +78,14 @@ function CenterDiceArena({
     setShowDice(true);
     setDiceKey((k) => k + 1);
     setImpulse([
-      (Math.random() - 0.5) * 2,
-      3 + Math.random() * 2,
-      (Math.random() - 0.5) * 2,
+      (Math.random() - 0.5) * 0.3,
+      0.6 + Math.random() * 0.4,
+      (Math.random() - 0.5) * 0.3,
     ]);
     setTorque([
-      (Math.random() - 0.5) * 12,
-      (Math.random() - 0.5) * 12,
-      (Math.random() - 0.5) * 12,
+      (Math.random() - 0.5) * 2,
+      (Math.random() - 0.5) * 2,
+      (Math.random() - 0.5) * 2,
     ]);
     play('roll');
     setTimeout(() => {
@@ -124,12 +124,12 @@ function CenterDiceArena({
       {/* Physics collider for center dice arena */}
       <RigidBody type="fixed" colliders={false} position={BOARD_CENTER}>
         {/* Floor */}
-        <CuboidCollider args={[4, 0.05, 4]} position={[0, -0.05, 0]} />
-        {/* Invisible walls around the center (1.5x1.5 area) */}
-        <CuboidCollider args={[1.5, 2, 0.1]} position={[0, 2, -1.6]} />
-        <CuboidCollider args={[1.5, 2, 0.1]} position={[0, 2, 1.6]} />
-        <CuboidCollider args={[0.1, 2, 1.5]} position={[-1.6, 2, 0]} />
-        <CuboidCollider args={[0.1, 2, 1.5]} position={[1.6, 2, 0]} />
+        <CuboidCollider args={[0.6, 0.05, 0.6]} position={[0, -0.05, 0]} />
+        {/* Invisible walls around the center (tight 1.2x1.2 area, tall to prevent escape) */}
+        <CuboidCollider args={[0.6, 5, 0.05]} position={[0, 5, -0.6]} />
+        <CuboidCollider args={[0.6, 5, 0.05]} position={[0, 5, 0.6]} />
+        <CuboidCollider args={[0.05, 5, 0.6]} position={[-0.6, 5, 0]} />
+        <CuboidCollider args={[0.05, 5, 0.6]} position={[0.6, 5, 0]} />
       </RigidBody>
     </>
   );
