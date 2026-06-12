@@ -44,9 +44,9 @@ export function TopBar() {
         <div className="font-display text-[11px] font-semibold tracking-wide text-game-gold md:text-[13px]">
           {statusText}
         </div>
-        {ludo.diceValue && (
+        {ludo.diceValues && ludo.diceValues.length > 0 && (
           <div className="text-[10px] text-game-secondary">
-            Last roll: <strong className="text-game-primary">{ludo.diceValue}</strong>
+            Moves left: <strong className="text-game-primary">{ludo.diceValues.join(', ')}</strong>
           </div>
         )}
       </div>
