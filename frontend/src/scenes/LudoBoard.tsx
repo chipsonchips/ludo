@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Text } from '@react-three/drei';
+import * as THREE from 'three';
 import {
   buildBoardCells,
   codeToColor,
@@ -26,35 +27,18 @@ const BASE_COLORS: Record<LudoColor, string> = {
   red:    '#D32F2F',
 };
 
-const BASE_INNER_COLORS: Record<LudoColor, string> = {
-  yellow: '#FFF9C4',
-  blue:   '#BBDEFB',
-  green:  '#C8E6C9',
-  red:    '#FFCDD2',
-};
-
 function cellStyle(code: RenderCell['code']): { color: string; height: number; y: number } {
   const white = '#FFFEF5';
   const cream = '#F5F0E8';
 
   if (code === 'W') return { color: white, height: 0.06, y: 0.08 };
   if (code === '*') return { color: white, height: 0.07, y: 0.09 };
-  if (code === 'CC') return { color: white, height: 0.1, y: 0.12 };
-
-  // Token slot cells inside base areas — use the inner (lighter) base color
-  if (code === 's') return { color: cream, height: 0.05, y: 0.07 };
 
   const ludoColor = codeToColor(code);
   if (ludoColor) {
     const isHome = code.startsWith('H');
-    const isCenter = code === 'CY' || code === 'CB' || code === 'CG' || code === 'CR';
     const isStart = code.startsWith('S');
-    const isBaseEdge = code.length === 1; // Y, B, G, R
-    const isBaseInner = code === 'y' || code === 'b' || code === 'g' || code === 'r';
 
-    if (isBaseEdge) return { color: BASE_COLORS[ludoColor], height: 0.06, y: 0.08 };
-    if (isBaseInner) return { color: BASE_INNER_COLORS[ludoColor], height: 0.05, y: 0.07 };
-    if (isCenter) return { color: BASE_COLORS[ludoColor], height: 0.10, y: 0.12 };
     if (isHome) return { color: getColorHex(ludoColor), height: 0.07, y: 0.09 };
     if (isStart) return { color: getColorHex(ludoColor), height: 0.07, y: 0.09 };
     return { color: getColorHex(ludoColor), height: 0.07, y: 0.09 };
@@ -63,18 +47,10 @@ function cellStyle(code: RenderCell['code']): { color: string; height: number; y
   return { color: cream, height: 0.04, y: 0.06 };
 }
 
-function BOARD_CORNER_COLOR(row: number, col: number): LudoColor {
-  if (row > 8 && col < 6) return 'red'; // Top-Left visual
-  if (row > 8 && col > 8) return 'green'; // Top-Right visual
-  if (row < 6 && col < 6) return 'blue'; // Bottom-Left visual
-  return 'yellow'; // Bottom-Right visual
-}
-
 function BoardCellMesh({ row, col, code }: RenderCell) {
   const [x, , z] = gridToWorld(row, col, 0);
   const size = CELL_SIZE * 0.94;
   const { color, height, y } = cellStyle(code);
-  const slotColor = code === 's' ? BOARD_CORNER_COLOR(row, col) : null;
 
   return (
     <group position={[x, y, z]}>
@@ -82,21 +58,6 @@ function BoardCellMesh({ row, col, code }: RenderCell) {
         <boxGeometry args={[size, height, size]} />
         <meshStandardMaterial color={color} roughness={0.55} metalness={0.05} />
       </mesh>
-      {/* Token slot ring */}
-      {code === 's' && slotColor && (
-        <>
-          {/* Slot background */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, height / 2 + 0.003, 0]}>
-            <circleGeometry args={[size * 0.3, 24]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.4} metalness={0.05} />
-          </mesh>
-          {/* Slot ring */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, height / 2 + 0.006, 0]}>
-            <ringGeometry args={[size * 0.18, size * 0.32, 24]} />
-            <meshStandardMaterial color={BASE_COLORS[slotColor]} roughness={0.3} metalness={0.2} />
-          </mesh>
-        </>
-      )}
       {/* Safe star */}
       {code === '*' && (
         <Text
@@ -108,20 +69,6 @@ function BoardCellMesh({ row, col, code }: RenderCell) {
           anchorY="middle"
         >
           ★
-        </Text>
-      )}
-      {/* Center HOME label */}
-      {code.startsWith('C') && code !== 'CC' && (
-        <Text
-          position={[0, height / 2 + 0.02, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          fontSize={0.09}
-          color="#ffffff"
-          anchorX="center"
-          anchorY="middle"
-          fontWeight="bold"
-        >
-          HOME
         </Text>
       )}
       {/* Start arrow */}
@@ -141,8 +88,108 @@ function BoardCellMesh({ row, col, code }: RenderCell) {
   );
 }
 
+function SolidBase({ color, centerRow, centerCol }: { color: LudoColor; centerRow: number; centerCol: number }) {
+  const [x, , z] = gridToWorld(centerRow, centerCol, 0);
+  const baseSize = 6 * CELL_SIZE;
+  const innerSize = 4 * CELL_SIZE;
+  const slotRadius = CELL_SIZE * 0.35;
+  const slotOffset = 1.5 * CELL_SIZE;
+  
+  return (
+    <group position={[x, 0, z]}>
+      {/* Outer colored square */}
+      <mesh position={[0, 0.08, 0]} receiveShadow castShadow>
+        <boxGeometry args={[baseSize * 0.98, 0.06, baseSize * 0.98]} />
+        <meshStandardMaterial color={BASE_COLORS[color]} roughness={0.55} metalness={0.05} />
+      </mesh>
+      {/* Inner white square */}
+      <mesh position={[0, 0.082, 0]} receiveShadow>
+        <boxGeometry args={[innerSize, 0.06, innerSize]} />
+        <meshStandardMaterial color="#FFFEF5" roughness={0.55} metalness={0.05} />
+      </mesh>
+      
+      {/* 4 Token slots */}
+      {[-1, 1].map((dx) =>
+        [-1, 1].map((dz) => (
+          <group key={`${dx}-${dz}`} position={[dx * slotOffset, 0.083, dz * slotOffset]}>
+            {/* Slot background */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+              <circleGeometry args={[slotRadius, 32]} />
+              <meshStandardMaterial color="#ffffff" roughness={0.4} metalness={0.05} />
+            </mesh>
+            {/* Slot ring */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.032, 0]}>
+              <ringGeometry args={[slotRadius * 0.7, slotRadius * 1.1, 32]} />
+              <meshStandardMaterial color={BASE_COLORS[color]} roughness={0.3} metalness={0.2} />
+            </mesh>
+          </group>
+        ))
+      )}
+    </group>
+  );
+}
+
+function CenterTriangle({ color, rotation }: { color: string; rotation: number }) {
+  const size = 1.5 * CELL_SIZE;
+  const shape = useMemo(() => {
+    const s = new THREE.Shape();
+    s.moveTo(-size, size);
+    s.lineTo(size, size);
+    s.lineTo(0, 0);
+    s.lineTo(-size, size);
+    return s;
+  }, [size]);
+
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, rotation]} position={[0, 0.11, 0]} receiveShadow>
+      <shapeGeometry args={[shape]} />
+      <meshStandardMaterial color={color} roughness={0.55} metalness={0.05} />
+    </mesh>
+  );
+}
+
+function CenterHome() {
+  const [x, , z] = gridToWorld(7, 7, 0);
+  return (
+    <group position={[x, 0, z]}>
+      {/* The rotations point the triangle base toward the corresponding visual arm */}
+      <CenterTriangle color={BASE_COLORS.blue} rotation={0} /> {/* Visual Top */}
+      <CenterTriangle color={BASE_COLORS.red} rotation={-Math.PI / 2} /> {/* Visual Right */}
+      <CenterTriangle color={BASE_COLORS.green} rotation={Math.PI} /> {/* Visual Bottom */}
+      <CenterTriangle color={BASE_COLORS.yellow} rotation={Math.PI / 2} /> {/* Visual Left */}
+      
+      {/* Center HOME label */}
+      <Text
+        position={[0, 0.112, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.25}
+        color="#ffffff"
+        anchorX="center"
+        anchorY="middle"
+        fontWeight="bold"
+      >
+        HOME
+      </Text>
+    </group>
+  );
+}
+
 export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardProps) {
-  const cells = useMemo(() => buildBoardCells(), []);
+  const allCells = useMemo(() => buildBoardCells(), []);
+  
+  // Filter out base squares and center squares since they are now drawn solid
+  const renderCells = useMemo(() => {
+    return allCells.filter(cell => {
+      // Filter out bases (6x6)
+      if (cell.row < 6 && cell.col < 6) return false;
+      if (cell.row < 6 && cell.col > 8) return false;
+      if (cell.row > 8 && cell.col > 8) return false;
+      if (cell.row > 8 && cell.col < 6) return false;
+      // Filter out center hub (3x3)
+      if (cell.row >= 6 && cell.row <= 8 && cell.col >= 6 && cell.col <= 8) return false;
+      return true;
+    });
+  }, [allCells]);
 
   return (
     <group>
@@ -162,42 +209,40 @@ export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardPro
         <meshStandardMaterial color="#2a1810" roughness={0.9} />
       </mesh>
 
-      {/* All grid cells */}
-      {cells.map((cell) => (
+      {/* Solid Bases */}
+      <SolidBase color="yellow" centerRow={11.5} centerCol={2.5} />
+      <SolidBase color="blue" centerRow={11.5} centerCol={11.5} />
+      <SolidBase color="red" centerRow={2.5} centerCol={11.5} />
+      <SolidBase color="green" centerRow={2.5} centerCol={2.5} />
+
+      {/* Center Home */}
+      <CenterHome />
+
+      {/* Grid cells (paths) */}
+      {renderCells.map((cell) => (
         <BoardCellMesh key={`${cell.row}-${cell.col}`} {...cell} />
       ))}
 
       {/* Center dice platform */}
-      <mesh receiveShadow castShadow position={[0, 0.11, 0]}>
+      <mesh receiveShadow castShadow position={[0, 0.115, 0]}>
         <cylinderGeometry args={[0.55, 0.6, 0.04, 32]} />
         <meshStandardMaterial color="#3d2b1f" roughness={0.7} metalness={0.1} />
       </mesh>
       {/* Center circle top */}
-      <mesh position={[0, 0.14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.135, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.5, 32]} />
         <meshStandardMaterial color="#FFFEF5" roughness={0.4} emissive="#f59e0b" emissiveIntensity={0.05} />
       </mesh>
       {/* Center decorative ring */}
-      <mesh position={[0, 0.145, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.136, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.38, 0.48, 32]} />
         <meshStandardMaterial color="#C9A84C" roughness={0.3} metalness={0.3} />
       </mesh>
       {/* Inner ring */}
-      <mesh position={[0, 0.146, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.137, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.22, 0.28, 32]} />
         <meshStandardMaterial color="#C9A84C" roughness={0.3} metalness={0.3} />
       </mesh>
-      {/* Center LUDO text */}
-      <Text
-        position={[0, 0.15, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={0.12}
-        color="#8B6914"
-        anchorX="center"
-        anchorY="middle"
-      >
-        LUDO
-      </Text>
 
       {/* Tokens */}
       {ludo.tokens.map((token) => {
