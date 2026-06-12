@@ -37,27 +37,40 @@ function fillBase(_color: LudoColor, r0: number, c0: number, code: 'Y' | 'B' | '
   slots.forEach(([r, c]) => set(r, c, 's'));
 }
 
-fillBase('yellow', 0, 0, 'Y', 'y');
-fillBase('blue', 0, 9, 'B', 'b');
-fillBase('green', 9, 0, 'G', 'g');
-fillBase('red', 9, 9, 'R', 'r');
+fillBase('blue', 0, 0, 'B', 'b'); // Visual Bottom-Left
+fillBase('yellow', 0, 9, 'Y', 'y'); // Visual Bottom-Right
+fillBase('red', 9, 0, 'R', 'r'); // Visual Top-Left
+fillBase('green', 9, 9, 'G', 'g'); // Visual Top-Right
 
 // ── Main path (52 cells) ────────────────────────────────────────
 const MAIN_PATH: [number, number][] = [
-  [6, 1], [6, 2], [6, 3], [6, 4], [6, 5],
-  [5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [0, 6],
-  [0, 7], [0, 8], [0, 9], [0, 10], [0, 11], [0, 12],
-  [1, 12], [2, 12], [3, 12], [4, 12], [5, 12],
-  [6, 13], [6, 14],
-  [7, 14], [8, 14], [9, 14], [10, 14], [11, 14], [12, 14], [13, 14], [14, 14],
-  [14, 13], [14, 12], [14, 11], [14, 10], [14, 9], [14, 8], [14, 7], [14, 6],
-  [13, 6], [12, 6], [11, 6], [10, 6], [9, 6], [8, 6],
-  [8, 5], [8, 4], [8, 3], [8, 2], [8, 1], [8, 0],
-  [7, 0], [6, 0],
-  [5, 0], [4, 0], [3, 0], [2, 0], [1, 0],
+  // Visual Left arm, Top row (moving right)
+  [8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5],
+  // Visual Top arm, Left col (moving up)
+  [9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6],
+  // Visual Top arm, Top row (moving right)
+  [14, 7], [14, 8],
+  // Visual Top arm, Right col (moving down)
+  [13, 8], [12, 8], [11, 8], [10, 8], [9, 8],
+  // Visual Right arm, Top row (moving right)
+  [8, 9], [8, 10], [8, 11], [8, 12], [8, 13], [8, 14],
+  // Visual Right arm, Right col (moving down)
+  [7, 14], [6, 14],
+  // Visual Right arm, Bottom row (moving left)
+  [6, 13], [6, 12], [6, 11], [6, 10], [6, 9],
+  // Visual Bottom arm, Right col (moving down)
+  [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
+  // Visual Bottom arm, Bottom row (moving left)
+  [0, 7], [0, 6],
+  // Visual Bottom arm, Left col (moving up)
+  [1, 6], [2, 6], [3, 6], [4, 6], [5, 6],
+  // Visual Left arm, Bottom row (moving left)
+  [6, 5], [6, 4], [6, 3], [6, 2], [6, 1], [6, 0],
+  // Visual Left arm, Left col (moving up)
+  [7, 0]
 ];
 
-const SAFE_INDICES = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
+const SAFE_INDICES = new Set([1, 9, 14, 22, 27, 35, 40, 48]);
 
 MAIN_PATH.forEach(([r, c], i) => {
   if (grid[r][c] === '.') set(r, c, SAFE_INDICES.has(i) ? '*' : 'W');
@@ -65,10 +78,10 @@ MAIN_PATH.forEach(([r, c], i) => {
 
 // ── Colored start squares ───────────────────────────────────────
 const START_CELLS: Record<LudoColor, [number, number]> = {
-  yellow: MAIN_PATH[0],
-  blue: MAIN_PATH[13],
-  red: MAIN_PATH[26],
-  green: MAIN_PATH[39],
+  red: MAIN_PATH[1],
+  green: MAIN_PATH[14],
+  yellow: MAIN_PATH[27],
+  blue: MAIN_PATH[40],
 };
 (Object.entries(START_CELLS) as [LudoColor, [number, number]][]).forEach(([color, [r, c]]) => {
   set(r, c, `S${color[0].toUpperCase()}` as CellCode);
@@ -76,10 +89,10 @@ const START_CELLS: Record<LudoColor, [number, number]> = {
 
 // ── Home columns (5 cells each) ───────────────────────────────
 const HOME_PATHS: Record<LudoColor, [number, number][]> = {
-  yellow: [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7]],
-  blue: [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9]],
-  red: [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7]],
-  green: [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5]],
+  red: [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5]], // Left arm
+  green: [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7]], // Top arm
+  yellow: [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9]], // Right arm
+  blue: [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7]], // Bottom arm
 };
 
 (Object.entries(HOME_PATHS) as [LudoColor, [number, number][]][]).forEach(([color, cells]) => {
@@ -88,10 +101,10 @@ const HOME_PATHS: Record<LudoColor, [number, number][]> = {
 });
 
 // ── Center hub (2×2 + triangles) ────────────────────────────────
-set(6, 7, 'CY');
-set(7, 8, 'CB');
-set(8, 7, 'CR');
-set(7, 6, 'CG');
+set(8, 7, 'CG');
+set(7, 8, 'CY');
+set(6, 7, 'CB');
+set(7, 6, 'CR');
 set(7, 7, 'CC');
 
 // Fill remaining cross arms (white) between path columns
@@ -121,10 +134,10 @@ for (let c = 9; c <= 13; c++) {
 export const BOARD_GRID = grid;
 
 export const SLOT_POSITIONS: Record<LudoColor, [number, number][]> = {
-  yellow: [[1, 1], [1, 3], [3, 1], [3, 3]],
-  blue: [[1, 10], [1, 12], [3, 10], [3, 12]],
-  green: [[10, 1], [10, 3], [12, 1], [12, 3]],
-  red: [[10, 10], [10, 12], [12, 10], [12, 12]],
+  blue: [[1, 1], [1, 3], [3, 1], [3, 3]],
+  yellow: [[1, 10], [1, 12], [3, 10], [3, 12]],
+  red: [[10, 1], [10, 3], [12, 1], [12, 3]],
+  green: [[10, 10], [10, 12], [12, 10], [12, 12]],
 };
 
 export { MAIN_PATH, HOME_PATHS, SAFE_INDICES, START_CELLS };
