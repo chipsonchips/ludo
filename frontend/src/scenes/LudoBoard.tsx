@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
-import { Text } from '@react-three/drei';
+import { useMemo, useRef, Suspense } from 'react';
+import { Text, useGLTF } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   buildBoardCells,
@@ -47,6 +48,21 @@ function cellStyle(code: RenderCell['code']): { color: string; height: number; y
   return { color: cream, height: 0.04, y: 0.06 };
 }
 
+function SafeZoneEffect() {
+  const ringRef = useRef<THREE.Group>(null);
+  useFrame((state) => {
+    if (ringRef.current) {
+      ringRef.current.rotation.y = state.clock.elapsedTime * 0.5;
+    }
+  });
+  return (
+    <group ref={ringRef} position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[CELL_SIZE * 0.35, CELL_SIZE * 0.45, 32]} />
+      <meshStandardMaterial color="#F6B73C" roughness={0.2} metalness={0.8} side={THREE.DoubleSide} transparent opacity={0.8} />
+    </group>
+  );
+}
+
 function BoardCellMesh({ row, col, code }: RenderCell) {
   const [x, , z] = gridToWorld(row, col, 0);
   const size = CELL_SIZE * 0.94;
@@ -56,20 +72,23 @@ function BoardCellMesh({ row, col, code }: RenderCell) {
     <group position={[x, y, z]}>
       <mesh receiveShadow castShadow position={[0, height / 2, 0]}>
         <boxGeometry args={[size, height, size]} />
-        <meshStandardMaterial color={color} roughness={0.55} metalness={0.05} />
+        <meshStandardMaterial color={color} roughness={0.4} metalness={0.1} />
       </mesh>
       {/* Safe star */}
       {code === '*' && (
-        <Text
-          position={[0, height / 2 + 0.02, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          fontSize={0.2}
-          color="#1a1a2e"
-          anchorX="center"
-          anchorY="middle"
-        >
-          ★
-        </Text>
+        <>
+          <Text
+            position={[0, height / 2 + 0.02, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            fontSize={0.2}
+            color="#F6B73C"
+            anchorX="center"
+            anchorY="middle"
+          >
+            ★
+          </Text>
+          <SafeZoneEffect />
+        </>
       )}
       {/* Start arrow */}
       {(code === 'SY' || code === 'SB' || code === 'SG' || code === 'SR') && (
@@ -148,28 +167,59 @@ function CenterTriangle({ color, rotation }: { color: string; rotation: number }
   );
 }
 
+function CenterTrophy() {
+  const groupRef = useRef<THREE.Group>(null);
+  
+  // Attempt to load a beautiful trophy glTF from pmndrs market CDN. 
+  // We use Suspense around this in the parent so it doesn't block.
+  const { nodes, materials } = useGLTF('https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/trophy/model.gltf') as any;
+
+  useFrame((state) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y = state.clock.elapsedTime * 0.5;
+      groupRef.current.position.y = 0.5 + Math.sin(state.clock.elapsedTime * 2) * 0.05;
+    }
+  });
+
+  return (
+    <group ref={groupRef} scale={1.5}>
+      {nodes && nodes.Trophy ? (
+        <mesh castShadow geometry={nodes.Trophy.geometry} material={materials.Gold} rotation={[Math.PI / 2, 0, 0]} />
+      ) : (
+        <group>
+          {/* Fallback procedural trophy if gltf fails */}
+          <mesh castShadow position={[0, 0, 0]}>
+            <cylinderGeometry args={[0.3, 0.2, 0.2, 16]} />
+            <meshStandardMaterial color="#F6B73C" roughness={0.1} metalness={0.9} />
+          </mesh>
+          <mesh castShadow position={[0, 0.2, 0]}>
+            <coneGeometry args={[0.35, 0.3, 16]} />
+            <meshStandardMaterial color="#F6B73C" roughness={0.1} metalness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.2, 0]}>
+            <sphereGeometry args={[0.15, 32, 32]} />
+            <meshPhysicalMaterial color="#EF4444" roughness={0.1} transmission={0.9} thickness={0.5} clearcoat={1} />
+          </mesh>
+        </group>
+      )}
+      <pointLight color="#F6B73C" intensity={1} distance={2} />
+    </group>
+  );
+}
+
+// Preload the GLTF
+useGLTF.preload('https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/trophy/model.gltf');
+
 function CenterHome() {
   const [x, , z] = gridToWorld(7, 7, 0);
   return (
     <group position={[x, 0, z]}>
-      {/* The rotations point the triangle base toward the corresponding visual arm */}
       <CenterTriangle color={BASE_COLORS.blue} rotation={0} /> {/* Visual Top */}
       <CenterTriangle color={BASE_COLORS.red} rotation={-Math.PI / 2} /> {/* Visual Right */}
       <CenterTriangle color={BASE_COLORS.green} rotation={Math.PI} /> {/* Visual Bottom */}
       <CenterTriangle color={BASE_COLORS.yellow} rotation={Math.PI / 2} /> {/* Visual Left */}
       
-      {/* Center HOME label */}
-      <Text
-        position={[0, 0.112, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={0.25}
-        color="#ffffff"
-        anchorX="center"
-        anchorY="middle"
-        fontWeight="bold"
-      >
-        HOME
-      </Text>
+      <CenterTrophy />
     </group>
   );
 }
