@@ -1,61 +1,68 @@
 import { Suspense, useState, useCallback, useEffect, useRef } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
-import { Environment, OrbitControls, ContactShadows } from '@react-three/drei';
+import * as THREE from 'three';
 import { LudoBoard } from './LudoBoard';
 import { DiceMesh } from './DiceMesh';
 import { ParticleEffects } from './ParticleEffects';
 import { useGameStore } from '@/stores/gameStore';
 import { useSound } from '@/hooks/useSound';
 import { BOARD_CENTER } from '@/ludo/constants';
+import { LoungeEnvironment } from './LoungeEnvironment';
 
-const BOARD_TARGET: [number, number, number] = [0, 0, 0];
+const BOARD_TARGET = new THREE.Vector3(0, 0, 0);
+const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 12, 10);
+const ROLL_CAMERA_POS = new THREE.Vector3(0, 8, 8);
 
-function SceneLighting() {
-  return (
-    <>
-      <ambientLight intensity={0.65} />
-      <directionalLight
-        position={[3, 14, 8]}
-        intensity={1.6}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-far={25}
-        shadow-camera-left={-5}
-        shadow-camera-right={5}
-        shadow-camera-top={5}
-        shadow-camera-bottom={-5}
-      />
-      <directionalLight position={[-6, 10, -4]} intensity={0.4} color="#fff5e6" />
-      <pointLight position={[0, 3, 0]} intensity={0.5} color="#f59e0b" distance={8} />
-    </>
-  );
-}
-
-function BoardCamera() {
+function CinematicCamera() {
   const { camera } = useThree();
-  useEffect(() => {
-    camera.position.set(0, 10, 10);
-    camera.lookAt(...BOARD_TARGET);
-  }, [camera]);
-  return null;
-}
+  const ludo = useGameStore((s) => s.ludo);
+  const isRolling = useGameStore((s) => s.isRolling);
+  
+  const targetPos = useRef(DEFAULT_CAMERA_POS.clone());
+  const targetLook = useRef(BOARD_TARGET.clone());
 
-function BoardControls() {
-  return (
-    <OrbitControls
-      target={BOARD_TARGET}
-      minDistance={7}
-      maxDistance={17}
-      minPolarAngle={0.35}
-      maxPolarAngle={Math.PI / 2.15}
-      enablePan={false}
-      enableDamping
-      dampingFactor={0.08}
-      rotateSpeed={0.7}
-      zoomSpeed={0.9}
-    />
-  );
+  useEffect(() => {
+    if (isRolling) {
+      targetPos.current.copy(ROLL_CAMERA_POS);
+      targetLook.current.copy(BOARD_TARGET);
+    } else if (ludo.winnerId) {
+      targetPos.current.set(0, 15, 15); // zoom out
+    } else {
+      targetPos.current.copy(DEFAULT_CAMERA_POS);
+      
+      // Slight tilt toward active player
+      if (ludo.players[ludo.currentPlayerIndex]) {
+        const color = ludo.players[ludo.currentPlayerIndex].color;
+        const offset = 1.5;
+        if (color === 'yellow') targetLook.current.set(-offset, 0, -offset);
+        if (color === 'blue') targetLook.current.set(offset, 0, -offset);
+        if (color === 'red') targetLook.current.set(offset, 0, offset);
+        if (color === 'green') targetLook.current.set(-offset, 0, offset);
+      }
+    }
+  }, [isRolling, ludo.winnerId, ludo.currentPlayerIndex, ludo.players]);
+
+  useFrame((state, delta) => {
+    // Smooth camera interpolation
+    camera.position.lerp(targetPos.current, delta * 2);
+    
+    // Smooth lookat interpolation
+    // Assuming camera has a lookAt target, we can interpolate a dummy object or just lerp a vector and call lookAt
+    // But since OrbitControls are gone, we manage lookAt manually
+    // For simplicity, we just look at board center, slightly offset by orbit
+    
+    // Let's add slight idle orbit
+    if (!isRolling && !ludo.winnerId) {
+      const time = state.clock.elapsedTime;
+      camera.position.x += Math.sin(time * 0.2) * 0.02;
+      camera.position.z += Math.cos(time * 0.2) * 0.02;
+    }
+
+    camera.lookAt(targetLook.current);
+  });
+
+  return null;
 }
 
 function CenterDiceArena({
@@ -79,25 +86,27 @@ function CenterDiceArena({
     settledValues.current = [];
     setShowDice(true);
     setDiceKey((k) => k + 1);
+    
+    // More dramatic throw
     setImpulse1([
-      (Math.random() - 0.5) * 0.2,
-      0.6 + Math.random() * 0.4,
-      (Math.random() - 0.5) * 0.2,
+      (Math.random() - 0.5) * 0.4,
+      0.8 + Math.random() * 0.4,
+      (Math.random() - 0.5) * 0.4,
     ]);
     setImpulse2([
-      (Math.random() - 0.5) * 0.2,
-      0.6 + Math.random() * 0.4,
-      (Math.random() - 0.5) * 0.2,
+      (Math.random() - 0.5) * 0.4,
+      0.8 + Math.random() * 0.4,
+      (Math.random() - 0.5) * 0.4,
     ]);
     setTorque1([
-      (Math.random() - 0.5) * 2,
-      (Math.random() - 0.5) * 2,
-      (Math.random() - 0.5) * 2,
+      (Math.random() - 0.5) * 4,
+      (Math.random() - 0.5) * 4,
+      (Math.random() - 0.5) * 4,
     ]);
     setTorque2([
-      (Math.random() - 0.5) * 2,
-      (Math.random() - 0.5) * 2,
-      (Math.random() - 0.5) * 2,
+      (Math.random() - 0.5) * 4,
+      (Math.random() - 0.5) * 4,
+      (Math.random() - 0.5) * 4,
     ]);
     play('roll');
     setTimeout(() => {
@@ -116,7 +125,7 @@ function CenterDiceArena({
       
       if (settledValues.current.length === 2) {
         onRollComplete([...settledValues.current]);
-        setTimeout(() => setShowDice(false), 1800);
+        setTimeout(() => setShowDice(false), 2000); // Wait longer to show result
       }
     },
     [onRollComplete, play]
@@ -132,19 +141,21 @@ function CenterDiceArena({
         <>
           <DiceMesh
             key={`die1-${diceKey}`}
-            position={[BOARD_CENTER[0] - 0.15, 1.4, BOARD_CENTER[2]]}
+            position={[BOARD_CENTER[0] - 0.2, 1.8, BOARD_CENTER[2]]}
             impulse={impulse1}
             torque={torque1}
-            onSettle={(v) => handleSettle(v, 0)}
-            color="#fffef9"
+            onSettle={(v) => handleSettle(v)}
+            color="#FFFaf0" // ivory
+            pipColor="#C9A84C" // gold pips
           />
           <DiceMesh
             key={`die2-${diceKey}`}
-            position={[BOARD_CENTER[0] + 0.15, 1.4, BOARD_CENTER[2]]}
+            position={[BOARD_CENTER[0] + 0.2, 1.8, BOARD_CENTER[2]]}
             impulse={impulse2}
             torque={torque2}
-            onSettle={(v) => handleSettle(v, 1)}
-            color="#fffef9"
+            onSettle={(v) => handleSettle(v)}
+            color="#FFFaf0"
+            pipColor="#C9A84C"
           />
         </>
       )}
@@ -165,14 +176,18 @@ function CenterDiceArena({
 export function GameScene() {
   const { ludo, isRolling, completeRoll, selectToken, selectedTokenId } = useGameStore();
   const [particles, setParticles] = useState(false);
+  const { play } = useSound();
 
   const handleRollComplete = useCallback(
     (values: number[]) => {
-      setParticles(true);
+      if (values.includes(6)) {
+        setParticles(true);
+        play('win'); // mini win sound for a 6
+        setTimeout(() => setParticles(false), 2000);
+      }
       completeRoll(values);
-      setTimeout(() => setParticles(false), 2000);
     },
-    [completeRoll]
+    [completeRoll, play]
   );
 
   return (
@@ -180,16 +195,14 @@ export function GameScene() {
       <Canvas
         shadows
         dpr={[1, 2]}
-        gl={{ antialias: true, alpha: false }}
-        camera={{ position: [0, 10, 10], fov: 42, near: 0.1, far: 100 }}
+        gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
+        camera={{ position: [0, 12, 10], fov: 42, near: 0.1, far: 100 }}
       >
-        <color attach="background" args={['#1a1410']} />
+        <color attach="background" args={['#0A0812']} />
         <Suspense fallback={null}>
-          <BoardCamera />
-          <BoardControls />
-          <SceneLighting />
-          <Environment preset="apartment" />
-          <ContactShadows position={[0, 0.1, 0]} opacity={0.5} scale={7} blur={2} far={3} />
+          <CinematicCamera />
+          
+          <LoungeEnvironment />
 
           <LudoBoard
             ludo={ludo}
@@ -197,11 +210,11 @@ export function GameScene() {
             onSelectToken={selectToken}
           />
 
-          <Physics gravity={[0, -25, 0]}>
+          <Physics gravity={[0, -35, 0]}>
             <CenterDiceArena isRolling={isRolling} onRollComplete={handleRollComplete} />
           </Physics>
 
-          <ParticleEffects active={particles} />
+          <ParticleEffects active={particles} color="#F6B73C" />
         </Suspense>
       </Canvas>
     </div>
