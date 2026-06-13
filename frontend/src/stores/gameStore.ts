@@ -14,10 +14,12 @@ interface GameStore {
   voiceMuted: boolean;
   pushToTalk: boolean;
   showChat: boolean;
+  activities: { id: string; message: string; timestamp: number }[];
 
   addReaction: (emoji: string) => void;
   sendChat: (message: string) => void;
   sendEmote: (emoji: string) => void;
+  addActivity: (message: string) => void;
   toggleVoiceMute: () => void;
   togglePushToTalk: () => void;
   toggleChat: () => void;
@@ -39,6 +41,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   voiceMuted: false,
   pushToTalk: false,
   showChat: true,
+  activities: [],
 
   addReaction: (emoji) => {
     const reaction: Reaction = {
@@ -81,6 +84,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  addActivity: (message) => {
+    set((s) => ({
+      activities: [
+        ...s.activities,
+        { id: `act-${Date.now()}-${Math.random()}`, message, timestamp: Date.now() },
+      ].slice(-5), // Keep only last 5 activities
+    }));
+  },
+
   toggleVoiceMute: () => set((s) => ({ voiceMuted: !s.voiceMuted })),
   togglePushToTalk: () => set((s) => ({ pushToTalk: !s.pushToTalk })),
   toggleChat: () => set((s) => ({ showChat: !s.showChat })),
@@ -120,6 +132,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
           message: extraTurn ? 'No legal moves, but rolled a 6! Roll again.' : 'No legal move — turn passed.',
         },
       });
+      if (extraTurn) {
+        get().addActivity(`${ludoWithDice.players[ludoWithDice.currentPlayerIndex].username} rolled a 6`);
+      } else {
+        get().addActivity(`${ludoWithDice.players[ludoWithDice.currentPlayerIndex].username} passed turn`);
+      }
+      
       const nextPlayer = ludoWithDice.players[nextIndex];
       if (!nextPlayer.isLocalPlayer) {
         setTimeout(() => get().autoRollForAI(), 1200);
@@ -190,6 +208,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         message: `Rolled ${values.join(' and ')} — select a token to move`,
       },
     });
+    
+    get().addActivity(`${ludoWithDice.players[ludoWithDice.currentPlayerIndex].username} rolled ${values.join(' and ')}`);
   },
 
   selectToken: (tokenId) => {
@@ -199,6 +219,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const moves = getLegalMoves(ludo);
     const move = moves.find((m) => m.tokenId === tokenId);
     if (!move) return;
+
+    if (move.capture) {
+      get().addActivity(`${ludo.players[ludo.currentPlayerIndex].username} captured a token!`);
+    }
+    if (move.newLocation.kind === 'finished') {
+      get().addActivity(`${ludo.players[ludo.currentPlayerIndex].username} entered home!`);
+    }
 
     const newLudo = applyMove(ludo, move);
     
