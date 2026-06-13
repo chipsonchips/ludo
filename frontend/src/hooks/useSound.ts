@@ -1,13 +1,16 @@
 import { useCallback, useRef } from 'react';
 
-type SoundType = 'roll' | 'land' | 'win' | 'emote' | 'click';
+type SoundType = 'roll' | 'land' | 'win' | 'emote' | 'click' | 'capture' | 'home' | 'turn_start';
 
 const frequencies: Record<SoundType, number[]> = {
   roll: [200, 250, 300, 350],
   land: [150, 100],
-  win: [523, 659, 784],
+  win: [523, 659, 784, 1046],
   emote: [440],
   click: [800],
+  capture: [200, 150, 100],
+  home: [523, 659],
+  turn_start: [440, 554, 659],
 };
 
 export function useSound() {
