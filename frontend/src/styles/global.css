@@ -4,20 +4,21 @@
   --font-display: 'Orbitron', sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
 
-  --color-game-bg: #0a0a12;
+  --color-game-bg: #0A0812;
   --color-game-surface: #12121f;
-  --color-game-glass: rgba(18, 18, 31, 0.75);
+  --color-game-glass: rgba(255, 255, 255, 0.08);
   --color-game-muted: #5c5c6e;
   --color-game-secondary: #9898a8;
   --color-game-primary: #f0f0f5;
-  --color-game-gold: #f59e0b;
-  --color-game-blue: #3b82f6;
-  --color-game-purple: #8b5cf6;
-  --color-game-green: #22c55e;
-  --color-game-red: #ef4444;
+  --color-game-gold: #F6B73C;
+  --color-game-orange: #FF9D00;
+  --color-game-blue: #3B82F6;
+  --color-game-green: #22C55E;
+  --color-game-red: #EF4444;
 
   --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
   --animate-shimmer: shimmer 2s linear infinite;
+  --animate-ring-pulse: ring-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes pulse-glow {
@@ -28,6 +29,11 @@
 @keyframes shimmer {
   0% { background-position: -200% center; }
   100% { background-position: 200% center; }
+}
+
+@keyframes ring-pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
 
 @layer base {
@@ -55,7 +61,8 @@
 
 @layer components {
   .glass-panel {
-    @apply rounded-xl border border-white/10 backdrop-blur-xl;
+    @apply rounded-xl border border-white/10 backdrop-blur-xl shadow-lg;
     background: var(--color-game-glass);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 }
