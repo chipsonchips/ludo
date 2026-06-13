@@ -13,14 +13,14 @@ const PIP_POSITIONS: Record<number, [number, number, number][]> = {
   6: [[-0.12, 0.14, 0], [0.12, 0.14, 0], [-0.12, 0, 0], [0.12, 0, 0], [-0.12, -0.14, 0], [0.12, -0.14, 0]],
 };
 
-function PipFace({ value, position, rotation }: { value: number; position: [number, number, number]; rotation: [number, number, number] }) {
+function PipFace({ value, position, rotation, pipColor }: { value: number; position: [number, number, number]; rotation: [number, number, number]; pipColor: string }) {
   const pips = PIP_POSITIONS[value] ?? PIP_POSITIONS[1];
   return (
     <group position={position} rotation={rotation}>
       {pips.map((p, i) => (
         <mesh key={i} position={p}>
           <circleGeometry args={[value === 1 ? 0.065 : 0.045, 32]} />
-          <meshStandardMaterial color="#1a1a2e" roughness={0.8} />
+          <meshStandardMaterial color={pipColor} roughness={0.4} metalness={0.6} />
         </mesh>
       ))}
     </group>
@@ -33,9 +33,10 @@ interface DiceMeshProps {
   torque?: [number, number, number];
   onSettle?: (value: number) => void;
   color?: string;
+  pipColor?: string;
 }
 
-export function DiceMesh({ position, impulse, torque, onSettle, color = '#f8f8ff' }: DiceMeshProps) {
+export function DiceMesh({ position, impulse, torque, onSettle, color = '#f8f8ff', pipColor = '#1a1a2e' }: DiceMeshProps) {
   const ref = useRef<RapierRigidBody>(null);
   const settled = useRef(false);
   const settleTimer = useRef(0);
@@ -145,7 +146,7 @@ export function DiceMesh({ position, impulse, torque, onSettle, color = '#f8f8ff
         <meshStandardMaterial color={color} roughness={0.25} metalness={0.1} />
       </RoundedBox>
       {faceRotations.map((face) => (
-        <PipFace key={face.value} value={face.value} position={face.position} rotation={face.rotation} />
+        <PipFace key={face.value} value={face.value} position={face.position} rotation={face.rotation} pipColor={pipColor} />
       ))}
     </RigidBody>
   );
