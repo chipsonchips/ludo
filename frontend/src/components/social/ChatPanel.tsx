@@ -24,43 +24,43 @@ export function ChatPanel() {
 
   return (
     <motion.div
-      className="glass-panel flex max-h-[140px] w-full max-w-[280px] flex-col overflow-hidden md:max-h-[200px]"
+      className="glass-panel flex max-h-[140px] w-full max-w-[280px] flex-col overflow-hidden shadow-xl md:max-h-[220px]"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
     >
       <div
-        className="flex flex-1 flex-col gap-1 overflow-y-auto p-2 px-3 [scrollbar-color:var(--color-game-muted)_transparent] [scrollbar-width:thin]"
+        className="flex flex-1 flex-col gap-1.5 overflow-y-auto p-2.5 px-3.5 [scrollbar-color:var(--color-game-gold)_transparent] [scrollbar-width:thin]"
         ref={listRef}
       >
         <AnimatePresence>
           {match.chat.map((msg) => (
             <motion.div
               key={msg.id}
-              className={`text-xs leading-snug ${msg.type === 'system' ? 'text-center' : ''}`}
+              className={`text-xs leading-relaxed ${msg.type === 'system' ? 'text-center' : ''}`}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
             >
               {msg.type === 'system' ? (
-                <span className="text-[10px] italic text-game-muted">{msg.message}</span>
+                <span className="text-[10px] italic text-game-gold drop-shadow-sm">{msg.message}</span>
               ) : msg.type === 'emote' ? (
-                <span className="text-base">
-                  <strong>{msg.username}</strong> {msg.message}
+                <span className="text-base drop-shadow-md">
+                  <strong className="text-white/90">{msg.username}</strong> {msg.message}
                 </span>
               ) : (
                 <>
-                  <strong className="mr-1.5 text-game-blue">{msg.username}</strong>
-                  <span className="text-game-secondary">{msg.message}</span>
+                  <strong className="mr-1.5 text-game-blue drop-shadow-sm">{msg.username}</strong>
+                  <span className="text-white/80">{msg.message}</span>
                 </>
               )}
             </motion.div>
           ))}
         </AnimatePresence>
       </div>
-      <form className="flex gap-1.5 border-t border-white/10 p-1.5 px-2" onSubmit={handleSubmit}>
+      <form className="flex gap-2 border-t border-white/10 bg-black/20 p-2" onSubmit={handleSubmit}>
         <input
           type="text"
-          className="flex-1 rounded-lg bg-white/5 px-2 py-1 text-xs text-game-primary placeholder:text-game-muted"
+          className="flex-1 rounded-full border border-white/5 bg-white/5 px-3 py-1.5 text-xs text-game-primary placeholder:text-white/30 transition-colors focus:border-game-gold/50 focus:bg-white/10"
           placeholder="Type a message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -68,7 +68,7 @@ export function ChatPanel() {
         />
         <button
           type="submit"
-          className="flex h-7 w-7 items-center justify-center rounded-full bg-game-blue text-xs text-white transition-opacity disabled:opacity-30"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-game-gold text-xs text-black transition-all disabled:opacity-30 disabled:grayscale hover:bg-game-orange hover:shadow-[0_0_10px_rgba(246,183,60,0.5)]"
           disabled={!input.trim()}
           aria-label="Send message"
         >
