@@ -18,51 +18,71 @@ export function RollButton() {
     rollDice();
   };
 
-  const diceIcon = showResult ? lastDiceValues.map(v => DICE_FACES[v - 1]).join(' ') : '🎲';
+  const statusLabel = isRolling
+    ? 'Rolling...'
+    : ludo.phase === 'select_token'
+      ? 'Pick a Token'
+      : isMyTurn
+        ? 'Your turn'
+        : `${current.username}'s turn`;
+
+  const buttonLabel = isRolling
+    ? 'Rolling...'
+    : showResult
+      ? lastDiceValues.map((v) => DICE_FACES[v - 1]).join(' ')
+      : 'Roll Dice';
 
   return (
-    <div className="relative flex flex-col items-center">
-      {/* Golden tray background */}
-      <div className="absolute inset-0 -top-6 rounded-[2rem] bg-gradient-to-b from-black/80 to-transparent blur-xl" />
-      
-      {/* Status above button */}
-      <div className="z-10 mb-2 h-6 text-center font-display text-[11px] font-bold uppercase tracking-[0.2em] text-game-gold drop-shadow-md">
-        {isRolling ? 'Rolling...' : ludo.phase === 'select_token' ? 'Pick Token' : isMyTurn ? 'Your Turn' : 'Wait...'}
-      </div>
-
+    <div className="flex flex-col items-center gap-1.5">
       <motion.button
-        className={`glass-panel relative flex h-14 w-48 items-center justify-center gap-3 overflow-hidden rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all md:h-16 md:w-56 ${
-          disabled 
-            ? 'cursor-not-allowed opacity-50' 
-            : 'border-game-gold/50 shadow-[0_0_30px_rgba(245,158,11,0.2)] hover:border-game-gold hover:shadow-[0_0_40px_rgba(245,158,11,0.4)]'
-        } ${isRolling ? 'animate-pulse-glow' : ''}`}
+        className="relative flex items-center justify-center gap-3 overflow-hidden rounded-full"
+        style={{
+          width: 220,
+          height: 56,
+          background: disabled
+            ? 'rgba(18, 18, 31, 0.8)'
+            : 'linear-gradient(180deg, rgba(246,183,60,0.18) 0%, rgba(12,10,24,0.92) 100%)',
+          border: `2px solid ${disabled ? 'rgba(255,255,255,0.08)' : '#F6B73C88'}`,
+          boxShadow: disabled
+            ? 'none'
+            : '0 0 28px rgba(246,183,60,0.25), 0 8px 32px rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(16px)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.55 : 1,
+        }}
         onClick={handleRoll}
         disabled={disabled}
-        whileHover={disabled ? {} : { scale: 1.02 }}
-        whileTap={disabled ? {} : { scale: 0.98 }}
-        style={{
-          background: disabled ? 'rgba(18, 18, 31, 0.8)' : 'linear-gradient(180deg, rgba(246, 183, 60, 0.15) 0%, rgba(18, 18, 31, 0.9) 100%)',
-        }}
+        whileHover={disabled ? {} : { scale: 1.03, boxShadow: '0 0 40px rgba(246,183,60,0.4), 0 8px 32px rgba(0,0,0,0.5)' }}
+        whileTap={disabled ? {} : { scale: 0.97 }}
       >
-        <span className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent bg-[length:200%_100%]" />
-        
+        {/* Shimmer sweep */}
+        {!disabled && (
+          <span className="absolute inset-0 animate-shimmer rounded-full bg-gradient-to-r from-transparent via-white/10 to-transparent bg-[length:200%_100%]" />
+        )}
+
         <AnimatePresence mode="wait">
-          <motion.span
-            key={isRolling ? 'rolling' : showResult ? `result-${lastDiceValues.join('-')}` : 'ready'}
-            initial={{ scale: 0.5, opacity: 0, rotate: -90 }}
-            animate={{ scale: 1, opacity: 1, rotate: 0 }}
-            exit={{ scale: 0.3, opacity: 0, rotate: 90 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className={`z-[1] drop-shadow-lg ${showResult && !isRolling ? 'text-2xl md:text-3xl' : 'text-2xl md:text-3xl'}`}
+          <motion.div
+            key={isRolling ? 'rolling' : showResult ? `r-${lastDiceValues.join('-')}` : 'idle'}
+            className="relative z-10 flex items-center gap-2.5"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
           >
-            {isRolling ? '🎲' : diceIcon}
-          </motion.span>
+            <span className="text-xl leading-none">{isRolling ? '🎲' : showResult ? DICE_FACES[lastDiceValues[0] - 1] : '🎲'}</span>
+            <span
+              className="font-display text-sm font-black uppercase tracking-widest text-white"
+              style={{ textShadow: disabled ? 'none' : '0 0 12px rgba(246,183,60,0.4)' }}
+            >
+              {buttonLabel}
+            </span>
+          </motion.div>
         </AnimatePresence>
-        
-        <span className="z-[1] font-display text-sm font-bold uppercase tracking-widest text-white drop-shadow-md md:text-base">
-          {showResult ? lastDiceValues.join(' & ') : 'Roll Dice'}
-        </span>
       </motion.button>
+
+      <span className="font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
+        {statusLabel}
+      </span>
     </div>
   );
 }

@@ -1,73 +1,69 @@
 import { motion } from 'framer-motion';
-import { useGameStore } from '@/stores/gameStore';
-import { VoiceControls } from '../social/VoiceControls';
 
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
+function formatTime(): string {
+  const now = new Date();
+  let h = now.getHours();
+  const m = now.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m} ${ampm}`;
 }
 
 export function TopBar() {
-  const { match, ludo } = useGameStore();
-  const current = ludo.players[ludo.currentPlayerIndex];
-
-  const statusText =
-    ludo.winnerId
-      ? ludo.message
-      : ludo.phase === 'select_token'
-        ? ludo.message
-        : ludo.isRolling
-          ? 'Rolling...'
-          : current.isLocalPlayer
-            ? 'Your turn — roll the die!'
-            : `${current.username}'s turn`;
-
   return (
-    <motion.header
-      className="pointer-events-auto z-10 flex items-center justify-between gap-2 px-4 py-3 md:gap-4 md:px-6 md:py-4"
-      initial={{ y: -60, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, ease: 'easeOut' }}
+    <motion.div
+      className="flex flex-col items-end gap-2"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.4 }}
     >
-      {/* Left side: Room info */}
-      <div className="glass-panel flex items-center gap-3 px-4 py-1.5 shadow-lg">
-        <div className="flex flex-col">
-          <span className="text-[9px] font-bold uppercase tracking-widest text-game-gold drop-shadow-sm">Room {match.room.id}</span>
-          <span className="font-display text-xs font-semibold tracking-wide text-white/90">High Stakes</span>
+      {/* Status pill */}
+      <div
+        className="flex items-center gap-3 rounded-xl px-3 py-2"
+        style={{
+          background: 'rgba(8, 6, 16, 0.90)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1.5px solid rgba(255,255,255,0.1)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
+        }}
+      >
+        {/* Clock */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-white/50">⏰</span>
+          <span className="font-display text-[11px] font-bold text-white/85">
+            {formatTime()}
+          </span>
         </div>
-        <div className="hidden h-8 w-px bg-white/10 md:block" />
-        <div className="hidden items-center gap-1.5 md:flex">
-          <span className="h-2 w-2 rounded-full bg-game-green shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-          <span className="text-[10px] font-medium text-white/80">4/4 Players</span>
+        <div className="h-3.5 w-px bg-white/15" />
+        {/* Ping */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-game-green">📶</span>
+          <span className="font-display text-[11px] font-bold text-white/85">42ms</span>
         </div>
-      </div>
-
-      {/* Center: Status */}
-      <div className="glass-panel hidden flex-col items-center justify-center px-6 py-1.5 shadow-lg md:flex min-w-[200px]">
-        <div className="font-display text-[13px] font-bold tracking-wider text-game-gold drop-shadow-md">
-          {statusText}
-        </div>
-        {ludo.diceValues && ludo.diceValues.length > 0 && (
-          <div className="text-[10px] text-game-secondary mt-0.5">
-            Moves left: <strong className="text-white drop-shadow-sm">{ludo.diceValues.join(', ')}</strong>
-          </div>
-        )}
-      </div>
-
-      {/* Right side: Controls & Time */}
-      <div className="glass-panel flex items-center gap-3 px-3 py-1.5 shadow-lg">
-        <div className="flex items-center gap-2 font-display text-sm font-bold md:text-base text-white/90">
-          <span className="text-game-gold drop-shadow-sm">⏱</span>
-          <span className="tracking-wider">{formatTime(match.matchTimer)}</span>
-        </div>
-        <div className="h-6 w-px bg-white/10" />
-        <VoiceControls />
-        <div className="h-6 w-px bg-white/10" />
-        <button className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/10 transition-colors text-white/70 hover:text-white">
+        <div className="h-3.5 w-px bg-white/15" />
+        {/* Settings */}
+        <button className="flex h-6 w-6 items-center justify-center rounded-full text-[13px] text-white/50 transition-colors hover:text-white/90">
           ⚙️
         </button>
       </div>
-    </motion.header>
+
+      {/* ChipsBettt branding */}
+      <span
+        style={{
+          fontFamily: 'Georgia, "Times New Roman", cursive',
+          fontStyle: 'italic',
+          fontSize: '1.8rem',
+          fontWeight: 700,
+          color: '#F6B73C',
+          textShadow: '0 0 20px rgba(246,183,60,0.55), 0 0 40px rgba(246,183,60,0.25)',
+          letterSpacing: '0.02em',
+          lineHeight: 1,
+          userSelect: 'none',
+        }}
+      >
+        ChipsBettt
+      </span>
+    </motion.div>
   );
 }

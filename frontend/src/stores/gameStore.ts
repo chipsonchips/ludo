@@ -40,7 +40,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectedTokenId: null,
   voiceMuted: false,
   pushToTalk: false,
-  showChat: true,
+  showChat: false,
   activities: [],
 
   addReaction: (emoji) => {
