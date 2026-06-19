@@ -36,12 +36,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
   match: dummyMatchState,
   ludo: initialLudo,
   isRolling: false,
-  lastDiceValues: [],
+  lastDiceValues: [5],
   selectedTokenId: null,
   voiceMuted: false,
   pushToTalk: false,
   showChat: false,
-  activities: [],
+  activities: [
+    { id: 'seed-1', message: 'NovaBlaze rolled a 6', timestamp: Date.now() - 5000 },
+    { id: 'seed-2', message: 'NovaBlaze moved', timestamp: Date.now() - 4000 },
+    { id: 'seed-3', message: 'LuckyStar captured DiceKing', timestamp: Date.now() - 3000 },
+    { id: 'seed-4', message: 'You rolled a 6 🎲', timestamp: Date.now() - 2000 },
+    { id: 'seed-5', message: "It's your turn", timestamp: Date.now() - 1000 },
+  ],
 
   addReaction: (emoji) => {
     const reaction: Reaction = {

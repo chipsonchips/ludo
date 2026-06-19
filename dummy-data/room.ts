@@ -2,7 +2,7 @@ import type { Room, MatchState } from './types';
 import { dummyPlayers } from './players';
 
 export const dummyRoom: Room = {
-  id: 'ROOM-7X9K2',
+  id: '7X9K2',
   name: 'High Stakes Arena',
   mode: '4player',
   isPrivate: false,
