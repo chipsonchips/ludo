@@ -1,5 +1,5 @@
-import { useMemo, useRef } from 'react';
-import { Text, useGLTF } from '@react-three/drei';
+import { useMemo, useRef, useState, useEffect } from 'react';
+import { Text } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
@@ -169,10 +169,6 @@ function CenterTriangle({ color, rotation }: { color: string; rotation: number }
 
 function CenterTrophy() {
   const groupRef = useRef<THREE.Group>(null);
-  
-  // Attempt to load a beautiful trophy glTF from pmndrs market CDN. 
-  // We use Suspense around this in the parent so it doesn't block.
-  const { nodes, materials } = useGLTF('https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/trophy/model.gltf') as any;
 
   useFrame((state) => {
     if (groupRef.current) {
@@ -183,48 +179,45 @@ function CenterTrophy() {
 
   return (
     <group ref={groupRef} scale={1.5}>
-      {nodes && nodes.Trophy ? (
-        <mesh castShadow geometry={nodes.Trophy.geometry} material={materials.Gold} rotation={[Math.PI / 2, 0, 0]} />
-      ) : (
-        <group>
-          {/* Fallback procedural trophy if gltf fails */}
-          <mesh castShadow position={[0, 0, 0]}>
-            <cylinderGeometry args={[0.3, 0.2, 0.2, 16]} />
-            <meshStandardMaterial color="#F6B73C" roughness={0.1} metalness={0.9} />
-          </mesh>
-          <mesh castShadow position={[0, 0.2, 0]}>
-            <coneGeometry args={[0.35, 0.3, 16]} />
-            <meshStandardMaterial color="#F6B73C" roughness={0.1} metalness={0.9} />
-          </mesh>
-          <mesh position={[0, 0.2, 0]}>
-            <sphereGeometry args={[0.15, 32, 32]} />
-            <meshPhysicalMaterial color="#EF4444" roughness={0.1} transmission={0.9} thickness={0.5} clearcoat={1} />
-          </mesh>
-        </group>
-      )}
+      <mesh castShadow position={[0, 0, 0]}>
+        <cylinderGeometry args={[0.3, 0.2, 0.2, 16]} />
+        <meshStandardMaterial color="#F6B73C" roughness={0.1} metalness={0.9} />
+      </mesh>
+      <mesh castShadow position={[0, 0.2, 0]}>
+        <coneGeometry args={[0.35, 0.3, 16]} />
+        <meshStandardMaterial color="#F6B73C" roughness={0.1} metalness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.2, 0]}>
+        <sphereGeometry args={[0.15, 32, 32]} />
+        <meshPhysicalMaterial color="#EF4444" roughness={0.1} transmission={0.9} thickness={0.5} clearcoat={1} />
+      </mesh>
       <pointLight color="#F6B73C" intensity={1} distance={2} />
     </group>
   );
 }
 
-// Preload the GLTF
-useGLTF.preload('https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/trophy/model.gltf');
-
-function CenterHome() {
+function CenterHome({ gameStarted }: { gameStarted: boolean }) {
   const [x, , z] = gridToWorld(7, 7, 0);
   return (
     <group position={[x, 0, z]}>
-      <CenterTriangle color={BASE_COLORS.blue} rotation={0} /> {/* Visual Top */}
-      <CenterTriangle color={BASE_COLORS.red} rotation={-Math.PI / 2} /> {/* Visual Right */}
-      <CenterTriangle color={BASE_COLORS.green} rotation={Math.PI} /> {/* Visual Bottom */}
-      <CenterTriangle color={BASE_COLORS.yellow} rotation={Math.PI / 2} /> {/* Visual Left */}
-      
-      <CenterTrophy />
+      <CenterTriangle color={BASE_COLORS.blue} rotation={0} />
+      <CenterTriangle color={BASE_COLORS.red} rotation={-Math.PI / 2} />
+      <CenterTriangle color={BASE_COLORS.green} rotation={Math.PI} />
+      <CenterTriangle color={BASE_COLORS.yellow} rotation={Math.PI / 2} />
+
+      {!gameStarted && <CenterTrophy />}
     </group>
   );
 }
 
 export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardProps) {
+  const [gameStarted, setGameStarted] = useState(false);
+  useEffect(() => {
+    if (!gameStarted && (ludo.isRolling || ludo.diceValues.length > 0 || ludo.phase !== 'roll')) {
+      setGameStarted(true);
+    }
+  }, [ludo.isRolling, ludo.diceValues.length, ludo.phase, gameStarted]);
+
   const allCells = useMemo(() => buildBoardCells(), []);
   
   // Filter out base squares and center squares since they are now drawn solid
@@ -266,7 +259,7 @@ export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardPro
       <SolidBase color="green" centerRow={2.5} centerCol={2.5} />
 
       {/* Center Home */}
-      <CenterHome />
+      <CenterHome gameStarted={gameStarted} />
 
       {/* Grid cells (paths) */}
       {renderCells.map((cell) => (

@@ -87,26 +87,25 @@ function CenterDiceArena({
     setShowDice(true);
     setDiceKey((k) => k + 1);
     
-    // More dramatic throw
     setImpulse1([
-      (Math.random() - 0.5) * 0.4,
-      0.8 + Math.random() * 0.4,
-      (Math.random() - 0.5) * 0.4,
+      (Math.random() - 0.5) * 0.15,
+      0.4 + Math.random() * 0.2,
+      (Math.random() - 0.5) * 0.15,
     ]);
     setImpulse2([
-      (Math.random() - 0.5) * 0.4,
-      0.8 + Math.random() * 0.4,
-      (Math.random() - 0.5) * 0.4,
+      (Math.random() - 0.5) * 0.15,
+      0.4 + Math.random() * 0.2,
+      (Math.random() - 0.5) * 0.15,
     ]);
     setTorque1([
-      (Math.random() - 0.5) * 4,
-      (Math.random() - 0.5) * 4,
-      (Math.random() - 0.5) * 4,
+      (Math.random() - 0.5) * 1.5,
+      (Math.random() - 0.5) * 1.5,
+      (Math.random() - 0.5) * 1.5,
     ]);
     setTorque2([
-      (Math.random() - 0.5) * 4,
-      (Math.random() - 0.5) * 4,
-      (Math.random() - 0.5) * 4,
+      (Math.random() - 0.5) * 1.5,
+      (Math.random() - 0.5) * 1.5,
+      (Math.random() - 0.5) * 1.5,
     ]);
     play('roll');
     setTimeout(() => {
@@ -141,16 +140,16 @@ function CenterDiceArena({
         <>
           <DiceMesh
             key={`die1-${diceKey}`}
-            position={[BOARD_CENTER[0] - 0.2, 1.8, BOARD_CENTER[2]]}
+            position={[BOARD_CENTER[0] - 0.18, 0.8, BOARD_CENTER[2]]}
             impulse={impulse1}
             torque={torque1}
             onSettle={(v) => handleSettle(v)}
-            color="#FFFaf0" // ivory
-            pipColor="#C9A84C" // gold pips
+            color="#FFFaf0"
+            pipColor="#C9A84C"
           />
           <DiceMesh
             key={`die2-${diceKey}`}
-            position={[BOARD_CENTER[0] + 0.2, 1.8, BOARD_CENTER[2]]}
+            position={[BOARD_CENTER[0] + 0.18, 0.8, BOARD_CENTER[2]]}
             impulse={impulse2}
             torque={torque2}
             onSettle={(v) => handleSettle(v)}
@@ -162,12 +161,12 @@ function CenterDiceArena({
       {/* Physics collider for center dice arena */}
       <RigidBody type="fixed" colliders={false} position={BOARD_CENTER}>
         {/* Floor */}
-        <CuboidCollider args={[0.6, 0.05, 0.6]} position={[0, -0.05, 0]} />
-        {/* Invisible walls around the center (tight 1.2x1.2 area, tall to prevent escape) */}
-        <CuboidCollider args={[0.6, 5, 0.05]} position={[0, 5, -0.6]} />
-        <CuboidCollider args={[0.6, 5, 0.05]} position={[0, 5, 0.6]} />
-        <CuboidCollider args={[0.05, 5, 0.6]} position={[-0.6, 5, 0]} />
-        <CuboidCollider args={[0.05, 5, 0.6]} position={[0.6, 5, 0]} />
+        <CuboidCollider args={[0.9, 0.05, 0.9]} position={[0, -0.05, 0]} />
+        {/* Invisible walls — 1.8×1.8 arena with thick walls */}
+        <CuboidCollider args={[0.9, 3, 0.15]} position={[0, 3, -0.9]} />
+        <CuboidCollider args={[0.9, 3, 0.15]} position={[0, 3, 0.9]} />
+        <CuboidCollider args={[0.15, 3, 0.9]} position={[-0.9, 3, 0]} />
+        <CuboidCollider args={[0.15, 3, 0.9]} position={[0.9, 3, 0]} />
       </RigidBody>
     </>
   );
