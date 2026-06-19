@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '@/stores/gameStore';
 
@@ -13,9 +13,12 @@ export function ReactionOverlay() {
   const reactions = useGameStore((s) => s.match.reactions);
   const [floating, setFloating] = useState<FloatingReaction[]>([]);
 
+  const seenRef = useRef(new Set<string>());
+
   useEffect(() => {
     const latest = reactions[reactions.length - 1];
-    if (!latest) return;
+    if (!latest || seenRef.current.has(latest.id)) return;
+    seenRef.current.add(latest.id);
 
     const id = latest.id;
     const x = 20 + Math.random() * 60;

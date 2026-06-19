@@ -58,7 +58,7 @@ export function PlayerCard({ player, index = 0 }: PlayerCardProps) {
         {/* Avatar */}
         <div className="relative z-10 shrink-0">
           <div
-            className="flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
+            className="flex h-12 w-12 items-center justify-center rounded-full text-2xl"
             style={{
               background: `linear-gradient(145deg, ${colorHex}30, ${colorHex}0a)`,
               border: `1.5px solid ${colorHex}55`,
