@@ -43,19 +43,19 @@ export function gridToWorld(row: number, col: number, y = 0.14): [number, number
 export function getTokenWorldPosition(location: TokenLocation, color: LudoColor): [number, number, number] {
   if (location.kind === 'base') {
     const [row, col] = BASE_SLOTS[color][location.slot];
-    return gridToWorld(row, col, 0.28);
+    return gridToWorld(row, col, 0.12);
   }
   if (location.kind === 'track') {
     const globalIndex = (START_INDEX[color] + location.index) % MAIN_PATH.length;
     const [row, col] = MAIN_PATH[globalIndex];
-    return gridToWorld(row, col, 0.28);
+    return gridToWorld(row, col, 0.13);
   }
   if (location.kind === 'home') {
     const [row, col] = HOME_PATHS[color][location.index];
-    return gridToWorld(row, col, 0.28);
+    return gridToWorld(row, col, 0.13);
   }
   const [row, col] = CENTER_CELLS[color];
-  return gridToWorld(row, col, 0.32);
+  return gridToWorld(row, col, 0.14);
 }
 
 export function getColorHex(color: LudoColor): string {
