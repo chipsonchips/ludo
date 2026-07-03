@@ -194,7 +194,7 @@ export function GameScene() {
       <Canvas
         shadows
         dpr={[1, 2]}
-        gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
+        gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.4 }}
         camera={{ position: [0, 12, 10], fov: 42, near: 0.1, far: 100 }}
       >
         <color attach="background" args={['#0A0812']} />

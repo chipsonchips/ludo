@@ -24,8 +24,8 @@ export function GameScreen() {
       {/* 3D scene */}
       <GameScene />
 
-      {/* Dark vignette edges */}
-      <div className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(ellipse_at_center,transparent_38%,rgba(10,8,18,0.62)_100%)]" />
+      {/* Subtle vignette edges */}
+      <div className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(10,8,18,0.35)_100%)]" />
 
       {/* HUD layer */}
       <div className="pointer-events-none absolute inset-0 z-[3]">
