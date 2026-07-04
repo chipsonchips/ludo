@@ -38,5 +38,5 @@ export const CENTER_CELLS: Record<LudoColor, [number, number]> = {
   green: [8, 7],
 };
 
-/** Board center for dice rolling arena */
-export const BOARD_CENTER: [number, number, number] = [0, 0.15, 0];
+/** Board center for dice rolling arena — matches the top of the center hub dais in LudoBoard */
+export const BOARD_CENTER: [number, number, number] = [0, 0.19, 0];
