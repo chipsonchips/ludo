@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '@/stores/gameStore';
 
@@ -9,15 +9,20 @@ interface FloatingReaction {
   y: number;
 }
 
+let floatId = 0;
+
 export function ReactionOverlay() {
   const reactions = useGameStore((s) => s.match.reactions);
   const [floating, setFloating] = useState<FloatingReaction[]>([]);
+  // Skip reactions that predate mount (dummy seed data) and StrictMode re-runs
+  const lastSeenId = useRef<string | null>(reactions[reactions.length - 1]?.id ?? null);
 
   useEffect(() => {
     const latest = reactions[reactions.length - 1];
-    if (!latest) return;
+    if (!latest || latest.id === lastSeenId.current) return;
+    lastSeenId.current = latest.id;
 
-    const id = latest.id;
+    const id = `float-${floatId++}`;
     const x = 20 + Math.random() * 60;
     const y = 30 + Math.random() * 40;
 

@@ -1,8 +1,8 @@
 import { GameScene } from '@/scenes/GameScene';
 import { TopBar } from './TopBar';
 import { BottomBar } from './BottomBar';
-import { PlayerPanel } from './PlayerPanel';
 import { RoundInfo } from './RoundInfo';
+import { WinnerOverlay } from './WinnerOverlay';
 import { ReactionOverlay } from '../social/ReactionOverlay';
 
 export function GameScreen() {
@@ -14,11 +14,12 @@ export function GameScreen() {
 
       <div className="pointer-events-none absolute inset-0 z-[3] flex flex-col justify-between">
         <TopBar />
-        <PlayerPanel />
         <RoundInfo />
         <ReactionOverlay />
         <BottomBar />
       </div>
+
+      <WinnerOverlay />
 
       <div className="pointer-events-none absolute bottom-28 left-1/2 z-[2] -translate-x-1/2 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[10px] uppercase tracking-widest text-white/40 backdrop-blur-sm md:bottom-32">
         Drag to rotate · Scroll to zoom
