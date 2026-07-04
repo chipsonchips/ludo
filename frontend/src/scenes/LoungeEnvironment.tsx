@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { Suspense, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Environment, MeshReflectorMaterial, SpotLight } from '@react-three/drei';
 import * as THREE from 'three';
@@ -66,8 +66,10 @@ function AbstractLounge() {
 export function LoungeEnvironment() {
   return (
     <group>
-      {/* High-quality studio environment for reflections (simulating city lights/lounge) */}
-      <Environment preset="night" background blur={0.6} />
+      {/* Isolated so a slow/failed HDRI load can never block the lights below from mounting */}
+      <Suspense fallback={null}>
+        <Environment preset="night" background blur={0.6} />
+      </Suspense>
 
       <AbstractLounge />
 

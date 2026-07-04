@@ -88,16 +88,16 @@ function CenterDiceArena({
     setShowDice(true);
     setDiceKey((k) => k + 1);
     
-    // More dramatic throw
+    // Gentle toss — stays low and centered over the dais instead of flying up
     setImpulse1([
-      (Math.random() - 0.5) * 0.4,
-      0.8 + Math.random() * 0.4,
-      (Math.random() - 0.5) * 0.4,
+      (Math.random() - 0.5) * 0.25,
+      0.3 + Math.random() * 0.2,
+      (Math.random() - 0.5) * 0.25,
     ]);
     setImpulse2([
-      (Math.random() - 0.5) * 0.4,
-      0.8 + Math.random() * 0.4,
-      (Math.random() - 0.5) * 0.4,
+      (Math.random() - 0.5) * 0.25,
+      0.3 + Math.random() * 0.2,
+      (Math.random() - 0.5) * 0.25,
     ]);
     setTorque1([
       (Math.random() - 0.5) * 4,
@@ -142,7 +142,7 @@ function CenterDiceArena({
         <>
           <DiceMesh
             key={`die1-${diceKey}`}
-            position={[BOARD_CENTER[0] - 0.2, 1.8, BOARD_CENTER[2]]}
+            position={[BOARD_CENTER[0] - 0.15, BOARD_CENTER[1] + 0.6, BOARD_CENTER[2]]}
             impulse={impulse1}
             torque={torque1}
             onSettle={(v) => handleSettle(v)}
@@ -151,7 +151,7 @@ function CenterDiceArena({
           />
           <DiceMesh
             key={`die2-${diceKey}`}
-            position={[BOARD_CENTER[0] + 0.2, 1.8, BOARD_CENTER[2]]}
+            position={[BOARD_CENTER[0] + 0.15, BOARD_CENTER[1] + 0.6, BOARD_CENTER[2]]}
             impulse={impulse2}
             torque={torque2}
             onSettle={(v) => handleSettle(v)}
@@ -164,11 +164,11 @@ function CenterDiceArena({
       <RigidBody type="fixed" colliders={false} position={BOARD_CENTER}>
         {/* Floor */}
         <CuboidCollider args={[0.6, 0.05, 0.6]} position={[0, -0.05, 0]} />
-        {/* Invisible walls around the center (tight 1.2x1.2 area, tall to prevent escape) */}
-        <CuboidCollider args={[0.6, 5, 0.05]} position={[0, 5, -0.6]} />
-        <CuboidCollider args={[0.6, 5, 0.05]} position={[0, 5, 0.6]} />
-        <CuboidCollider args={[0.05, 5, 0.6]} position={[-0.6, 5, 0]} />
-        <CuboidCollider args={[0.05, 5, 0.6]} position={[0.6, 5, 0]} />
+        {/* Invisible walls around the center (tight 1.2x1.2 area, just tall enough for the gentler toss) */}
+        <CuboidCollider args={[0.6, 1.2, 0.05]} position={[0, 1.2, -0.6]} />
+        <CuboidCollider args={[0.6, 1.2, 0.05]} position={[0, 1.2, 0.6]} />
+        <CuboidCollider args={[0.05, 1.2, 0.6]} position={[-0.6, 1.2, 0]} />
+        <CuboidCollider args={[0.05, 1.2, 0.6]} position={[0.6, 1.2, 0]} />
       </RigidBody>
     </>
   );
@@ -244,10 +244,7 @@ export function GameScene() {
           onEnd={handleControlsEnd}
         />
 
-        {/* Own Suspense boundary: the HDRI background/reflection load must never block the board from rendering */}
-        <Suspense fallback={null}>
-          <LoungeEnvironment />
-        </Suspense>
+        <LoungeEnvironment />
 
         <Suspense fallback={null}>
           <LudoBoard
