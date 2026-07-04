@@ -27,7 +27,9 @@ interface GameStore {
   completeRoll: (values: number[]) => void;
   selectToken: (tokenId: string) => void;
   autoRollForAI: () => void;
+  playAiMove: () => void;
   passTurn: () => void;
+  resetGame: () => void;
 }
 
 const initialLudo = createInitialLudoState(ludoPlayerDefs);
@@ -107,17 +109,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   completeRoll: (values) => {
     const { ludo } = get();
-    
+
     const extraTurn = values.includes(6);
     const ludoWithDice = { ...ludo, diceValues: values, extraTurn };
     const moves = getLegalMoves(ludoWithDice);
+    const roller = ludoWithDice.players[ludoWithDice.currentPlayerIndex];
+
+    get().addActivity(`${roller.username} rolled ${values.join(' and ')}`);
 
     if (moves.length === 0) {
       let nextIndex = ludoWithDice.currentPlayerIndex;
       if (!extraTurn) {
         nextIndex = (ludoWithDice.currentPlayerIndex + 1) % ludoWithDice.players.length;
       }
-      
+
       set({
         isRolling: false,
         lastDiceValues: values,
@@ -132,12 +137,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           message: extraTurn ? 'No legal moves, but rolled a 6! Roll again.' : 'No legal move — turn passed.',
         },
       });
-      if (extraTurn) {
-        get().addActivity(`${ludoWithDice.players[ludoWithDice.currentPlayerIndex].username} rolled a 6`);
-      } else {
-        get().addActivity(`${ludoWithDice.players[ludoWithDice.currentPlayerIndex].username} passed turn`);
-      }
-      
+
       const nextPlayer = ludoWithDice.players[nextIndex];
       if (!nextPlayer.isLocalPlayer) {
         setTimeout(() => get().autoRollForAI(), 1200);
@@ -145,56 +145,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    if (moves.length === 1) {
-      const newLudo = applyMove(ludoWithDice, moves[0]);
+    if (!roller.isLocalPlayer) {
+      // AI turn: enter select_token and let playAiMove consume the dice one move at a time
       set({
         isRolling: false,
         lastDiceValues: values,
-        selectedTokenId: null,
-        ludo: newLudo,
+        ludo: {
+          ...ludoWithDice,
+          phase: 'select_token',
+          isRolling: false,
+          selectableTokenIds: [],
+          message: `${roller.username} rolled ${values.join(' and ')}`,
+        },
       });
-      // if newLudo.phase is select_token, we still have dice left!
-      // wait, if we automatically apply it, what if there's another move for the other die?
-      // actually, if we automatically apply it, it's better to recursively play AI or wait for user.
-      // But it's safer to just go to select_token phase and let user click it, OR we can let it auto-play.
-      // Since two dice might mean they want to see what happens, let's just go to select_token if local player.
-      
-      const currentPlayer = ludoWithDice.players[ludoWithDice.currentPlayerIndex];
-      if (!currentPlayer.isLocalPlayer) {
-        // AI auto play
-        setTimeout(() => {
-           // We just let the next auto turn happen if phase went to roll
-           const nextPlayer = newLudo.players[newLudo.currentPlayerIndex];
-           if (!nextPlayer.isLocalPlayer && !newLudo.winnerId) {
-             setTimeout(() => get().autoRollForAI(), 1200);
-           }
-        }, 600);
-        return;
-      }
-      
-      // For local player, even if 1 move, let them click it or just auto-play it?
-      // Auto-playing one die when they rolled two might be confusing. Let's just enter select_token.
-    }
-
-    const currentPlayer = ludoWithDice.players[ludoWithDice.currentPlayerIndex];
-    if (!currentPlayer.isLocalPlayer) {
-      // AI play
-      const randomMove = moves[Math.floor(Math.random() * moves.length)];
-      const newLudo = applyMove(ludoWithDice, randomMove);
-      set({
-        isRolling: false,
-        lastDiceValues: values,
-        selectedTokenId: randomMove.tokenId,
-        ludo: newLudo,
-      });
-      setTimeout(() => set({ selectedTokenId: null }), 600);
-      
-      // If AI still has turn (phase is select_token), we need to let AI move again.
-      // Since our simple AI here just calls autoRollForAI, which only works if phase is 'roll'.
-      // Wait, if AI is in 'select_token' phase, how does it move?
-      // We should trigger an AI move function. For now, let's just cheat and apply all AI moves synchronously or via a timer.
-      // Let's just set the phase so they can roll. (The AI will just forfeit its second die for now, or we can fix AI later).
-      // We'll dispatch a fix for AI separately if needed.
+      setTimeout(() => get().playAiMove(), 900);
+      return;
     }
 
     set({
@@ -208,8 +173,63 @@ export const useGameStore = create<GameStore>((set, get) => ({
         message: `Rolled ${values.join(' and ')} — select a token to move`,
       },
     });
-    
-    get().addActivity(`${ludoWithDice.players[ludoWithDice.currentPlayerIndex].username} rolled ${values.join(' and ')}`);
+  },
+
+  playAiMove: () => {
+    const { ludo } = get();
+    if (ludo.winnerId || ludo.phase !== 'select_token') return;
+    const current = ludo.players[ludo.currentPlayerIndex];
+    if (current.isLocalPlayer) return;
+
+    const moves = getLegalMoves(ludo);
+
+    if (moves.length === 0) {
+      // Remaining dice have no legal move — end the AI's turn (keeping a rolled 6's bonus)
+      const nextIndex = ludo.extraTurn
+        ? ludo.currentPlayerIndex
+        : (ludo.currentPlayerIndex + 1) % ludo.players.length;
+      set({
+        ludo: {
+          ...ludo,
+          phase: 'roll',
+          diceValues: [],
+          extraTurn: false,
+          selectableTokenIds: [],
+          currentPlayerIndex: nextIndex,
+          players: ludo.players.map((p, i) => ({ ...p, isCurrentTurn: i === nextIndex })),
+        },
+      });
+      if (!ludo.players[nextIndex].isLocalPlayer) {
+        setTimeout(() => get().autoRollForAI(), 1200);
+      }
+      return;
+    }
+
+    // Simple AI priorities: finish a token, then capture, then random
+    const move =
+      moves.find((m) => m.newLocation.kind === 'finished') ??
+      moves.find((m) => m.capture) ??
+      moves[Math.floor(Math.random() * moves.length)];
+
+    if (move.capture) {
+      get().addActivity(`${current.username} captured a token!`);
+    }
+    if (move.newLocation.kind === 'finished') {
+      get().addActivity(`${current.username} got a token home!`);
+    }
+
+    const newLudo = applyMove(ludo, move);
+    set({ ludo: newLudo, selectedTokenId: move.tokenId });
+    setTimeout(() => set({ selectedTokenId: null }), 600);
+
+    if (newLudo.winnerId) return;
+
+    if (newLudo.phase === 'select_token') {
+      // Another die is still unspent
+      setTimeout(() => get().playAiMove(), 900);
+    } else if (!newLudo.players[newLudo.currentPlayerIndex].isLocalPlayer) {
+      setTimeout(() => get().autoRollForAI(), 1200);
+    }
   },
 
   selectToken: (tokenId) => {
@@ -287,4 +307,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       setTimeout(() => get().autoRollForAI(), 1200);
     }
   },
+
+  resetGame: () => {
+    set({
+      ludo: createInitialLudoState(ludoPlayerDefs),
+      isRolling: false,
+      lastDiceValues: [],
+      selectedTokenId: null,
+    });
+  },
 }));
+
+// Dev-only handle so the game can be driven from the console / e2e scripts
+if (import.meta.env.DEV) {
+  (window as unknown as Record<string, unknown>).__gameStore = useGameStore;
+}
