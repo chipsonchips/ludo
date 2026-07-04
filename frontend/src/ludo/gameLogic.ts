@@ -1,18 +1,13 @@
 import type { LudoColor, LudoState, LudoToken, TokenLocation } from './types';
 import { HOME_PATHS, MAIN_PATH, PLAYER_ORDER, SAFE_TRACK_INDICES, START_INDEX } from './constants';
 
-function trackIndexFor(color: LudoColor, globalPathIndex: number): number {
-  const start = START_INDEX[color];
-  return (globalPathIndex - start + MAIN_PATH.length) % MAIN_PATH.length;
-}
-
 function globalTrackIndex(color: LudoColor, relativeIndex: number): number {
   return (START_INDEX[color] + relativeIndex) % MAIN_PATH.length;
 }
 
+// SAFE_TRACK_INDICES are global MAIN_PATH indices (the cells drawn with a ★)
 function isSafeSquare(globalIndex: number): boolean {
-  const relativeFromYellow = trackIndexFor('yellow', globalIndex);
-  return SAFE_TRACK_INDICES.has(relativeFromYellow);
+  return SAFE_TRACK_INDICES.has(globalIndex);
 }
 
 function tokensAtTrackCell(state: LudoState, globalIndex: number, excludeTokenId?: string): LudoToken[] {
@@ -50,10 +45,14 @@ function simulateTrackMove(
 
   if (token.location.kind === 'track') {
     const current = token.location.index;
-    const stepsToHomeEntry = MAIN_PATH.length - current;
+    const newIndex = current + steps;
 
-    if (steps >= stepsToHomeEntry) {
-      const homeIndex = steps - stepsToHomeEntry;
+    // The home-lane turnoff sits two cells behind the start square, i.e. at
+    // relative index MAIN_PATH.length - 2 (50): a token covers 51 track cells,
+    // then its home lane, then the center.
+    const homeEntryIndex = MAIN_PATH.length - 2;
+    if (newIndex > homeEntryIndex) {
+      const homeIndex = newIndex - homeEntryIndex - 1;
       if (homeIndex > HOME_PATHS[token.color].length) return null;
       if (homeIndex === HOME_PATHS[token.color].length) {
         return { tokenId: token.id, newLocation: { kind: 'finished' }, dieValueUsed: steps };
@@ -61,7 +60,6 @@ function simulateTrackMove(
       return { tokenId: token.id, newLocation: { kind: 'home', index: homeIndex }, dieValueUsed: steps };
     }
 
-    const newIndex = current + steps;
     const globalIdx = globalTrackIndex(token.color, newIndex);
     if (!canLandOn(state, token.color, globalIdx, token.id)) return null;
 
@@ -72,12 +70,6 @@ function simulateTrackMove(
       capture,
       dieValueUsed: steps,
     };
-  }
-
-  if (token.location.kind === 'home') {
-    const newHomeIndex = token.location.index + steps;
-    if (newHomeIndex >= HOME_PATHS[token.color].length) return null;
-    return { tokenId: token.id, newLocation: { kind: 'home', index: newHomeIndex }, dieValueUsed: steps };
   }
 
   return null;

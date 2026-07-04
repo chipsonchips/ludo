@@ -40,3 +40,11 @@ export const CENTER_CELLS: Record<LudoColor, [number, number]> = {
 
 /** Board center for dice rolling arena — matches the top of the center hub dais in LudoBoard */
 export const BOARD_CENTER: [number, number, number] = [0, 0.19, 0];
+
+/** Center of each color's 6x6 base quadrant, in grid coordinates — for anchoring player nameplates beside their house */
+export const BASE_CENTER_CELLS: Record<LudoColor, [number, number]> = {
+  yellow: [11.5, 2.5],
+  blue: [11.5, 11.5],
+  red: [2.5, 11.5],
+  green: [2.5, 2.5],
+};

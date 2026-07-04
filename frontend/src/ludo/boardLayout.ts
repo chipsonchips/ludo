@@ -40,22 +40,30 @@ export function gridToWorld(row: number, col: number, y = 0.14): [number, number
   return [x, y, z];
 }
 
+// Token group origin is the pawn's base (its bottom face), so these must match
+// each cell type's actual top surface height in LudoBoard's cellStyle(), or the
+// pawn visibly floats above the board instead of resting on it.
+const BASE_SLOT_Y = 0.095; // 's' slot cells
+const TRACK_Y = 0.11; // 'W' path cells (safe-star cells sit ~0.015 higher, close enough)
+const HOME_LANE_Y = 0.125; // 'H*' cells
+const CENTER_HUB_Y = 0.19; // dais top, matches BOARD_CENTER
+
 export function getTokenWorldPosition(location: TokenLocation, color: LudoColor): [number, number, number] {
   if (location.kind === 'base') {
     const [row, col] = BASE_SLOTS[color][location.slot];
-    return gridToWorld(row, col, 0.28);
+    return gridToWorld(row, col, BASE_SLOT_Y);
   }
   if (location.kind === 'track') {
     const globalIndex = (START_INDEX[color] + location.index) % MAIN_PATH.length;
     const [row, col] = MAIN_PATH[globalIndex];
-    return gridToWorld(row, col, 0.28);
+    return gridToWorld(row, col, TRACK_Y);
   }
   if (location.kind === 'home') {
     const [row, col] = HOME_PATHS[color][location.index];
-    return gridToWorld(row, col, 0.28);
+    return gridToWorld(row, col, HOME_LANE_Y);
   }
   const [row, col] = CENTER_CELLS[color];
-  return gridToWorld(row, col, 0.32);
+  return gridToWorld(row, col, CENTER_HUB_Y);
 }
 
 export function getColorHex(color: LudoColor): string {
