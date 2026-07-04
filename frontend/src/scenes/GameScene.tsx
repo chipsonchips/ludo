@@ -38,7 +38,7 @@ function CinematicCamera({ controlsRef, interactingRef }: {
       targetPos.current.copy(ROLL_CAMERA_POS);
       targetLook.current.copy(BOARD_TARGET);
     } else if (ludo.winnerId) {
-      targetPos.current.set(0, 15, 15); // zoom out
+      targetPos.current.set(0, 10, 10); // zoom out (stays inside the room walls)
     } else {
       targetPos.current.copy(DEFAULT_CAMERA_POS);
 
@@ -100,14 +100,14 @@ function CenterDiceArena({
       (Math.random() - 0.5) * 0.25,
     ]);
     setTorque1([
-      (Math.random() - 0.5) * 4,
-      (Math.random() - 0.5) * 4,
-      (Math.random() - 0.5) * 4,
+      (Math.random() - 0.5) * 2.5,
+      (Math.random() - 0.5) * 2.5,
+      (Math.random() - 0.5) * 2.5,
     ]);
     setTorque2([
-      (Math.random() - 0.5) * 4,
-      (Math.random() - 0.5) * 4,
-      (Math.random() - 0.5) * 4,
+      (Math.random() - 0.5) * 2.5,
+      (Math.random() - 0.5) * 2.5,
+      (Math.random() - 0.5) * 2.5,
     ]);
     play('roll');
     setTimeout(() => {
@@ -136,6 +136,22 @@ function CenterDiceArena({
     if (isRolling && !showDice) handleRoll();
   }, [isRolling, showDice, handleRoll]);
 
+  // Watchdog: if a die escapes the arena or wedges without settling, the roll
+  // would hang the whole game (isRolling never clears). Salvage with random
+  // values for whatever hasn't reported in.
+  useEffect(() => {
+    if (!isRolling) return;
+    const timer = setTimeout(() => {
+      if (settledValues.current.length >= 2) return;
+      while (settledValues.current.length < 2) {
+        settledValues.current.push(1 + Math.floor(Math.random() * 6));
+      }
+      onRollComplete([...settledValues.current]);
+      setTimeout(() => setShowDice(false), 1500);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [isRolling, onRollComplete]);
+
   return (
     <>
       {showDice && (
@@ -162,8 +178,8 @@ function CenterDiceArena({
       )}
       {/* Physics collider for center dice arena */}
       <RigidBody type="fixed" colliders={false} position={BOARD_CENTER}>
-        {/* Floor */}
-        <CuboidCollider args={[0.6, 0.05, 0.6]} position={[0, -0.05, 0]} />
+        {/* Floor — thick slab so fast-falling dice can't tunnel through */}
+        <CuboidCollider args={[0.6, 0.25, 0.6]} position={[0, -0.25, 0]} />
         {/* Invisible walls around the center (tight 1.2x1.2 area, just tall enough for the gentler toss) */}
         <CuboidCollider args={[0.6, 1.2, 0.05]} position={[0, 1.2, -0.6]} />
         <CuboidCollider args={[0.6, 1.2, 0.05]} position={[0, 1.2, 0.6]} />
@@ -182,26 +198,12 @@ export function GameScene() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const controlsRef = useRef<any>(null);
   const interactingRef = useRef(false);
-  const resumeTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(() => {
-    return () => {
-      if (resumeTimeout.current) clearTimeout(resumeTimeout.current);
-    };
-  }, []);
-
+  // Once the player takes the camera, it's theirs: no auto-rotate resume, no
+  // cinematic drift back to the default framing.
   const handleControlsStart = useCallback(() => {
     interactingRef.current = true;
-    if (resumeTimeout.current) clearTimeout(resumeTimeout.current);
     if (controlsRef.current) controlsRef.current.autoRotate = false;
-  }, []);
-
-  const handleControlsEnd = useCallback(() => {
-    if (resumeTimeout.current) clearTimeout(resumeTimeout.current);
-    resumeTimeout.current = setTimeout(() => {
-      interactingRef.current = false;
-      if (controlsRef.current) controlsRef.current.autoRotate = true;
-    }, 2500);
   }, []);
 
   const handleRollComplete = useCallback(
@@ -235,13 +237,12 @@ export function GameScene() {
           enableDamping
           dampingFactor={0.08}
           minDistance={5}
-          maxDistance={20}
+          maxDistance={14}
           minPolarAngle={0.15}
           maxPolarAngle={Math.PI / 2 - 0.02}
           autoRotate
           autoRotateSpeed={0.4}
           onStart={handleControlsStart}
-          onEnd={handleControlsEnd}
         />
 
         <LoungeEnvironment />

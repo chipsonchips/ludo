@@ -12,6 +12,7 @@ import {
 import { CELL_SIZE } from '@/ludo/constants';
 import type { LudoColor, LudoState } from '@/ludo/types';
 import { LudoTokenMesh } from './LudoToken';
+import { PlayerBaseLabel } from './PlayerBaseLabel';
 
 interface LudoBoardProps {
   ludo: LudoState;
@@ -97,10 +98,10 @@ const START_ARROW_YAW: Record<LudoColor, number> = {
 };
 
 function BOARD_CORNER_COLOR(row: number, col: number): LudoColor {
-  if (row > 8 && col < 6) return 'red'; // Top-Left visual
-  if (row > 8 && col > 8) return 'green'; // Top-Right visual
-  if (row < 6 && col < 6) return 'blue'; // Bottom-Left visual
-  return 'yellow'; // Bottom-Right visual
+  if (row > 8 && col < 6) return 'yellow'; // Top-Left visual
+  if (row > 8 && col > 8) return 'blue'; // Top-Right visual
+  if (row < 6 && col < 6) return 'green'; // Bottom-Left visual
+  return 'red'; // Bottom-Right visual
 }
 
 function BoardCellMesh({ row, col, code }: RenderCell) {
@@ -261,7 +262,7 @@ export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardPro
       {/* Board backing */}
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <planeGeometry args={[6.5, 6.5]} />
-        <meshStandardMaterial color="#2a1810" roughness={0.9} />
+        <meshStandardMaterial color="#C9BFA8" roughness={0.9} />
       </mesh>
 
       {/* All grid cells */}
@@ -302,6 +303,11 @@ export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardPro
             />
           );
         })}
+
+      {/* Player nameplates, floating beside each player's own base */}
+      {ludo.players.map((player) => (
+        <PlayerBaseLabel key={player.id} player={player} />
+      ))}
     </group>
   );
 }

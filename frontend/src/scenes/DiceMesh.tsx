@@ -4,6 +4,9 @@ import { RoundedBox } from '@react-three/drei';
 import { RapierRigidBody, CuboidCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 
+/** Die edge = 0.5 * DIE_SCALE world units — sized to sit comfortably on the ~1.0-wide dais */
+const DIE_SCALE = 0.68;
+
 const PIP_POSITIONS: Record<number, [number, number, number][]> = {
   1: [[0, 0, 0]],
   2: [[-0.12, 0.12, 0], [0.12, -0.12, 0]],
@@ -140,14 +143,18 @@ export function DiceMesh({ position, impulse, torque, onSettle, color = '#f8f8ff
       linearDamping={0.3}
       angularDamping={0.4}
       colliders={false}
+      ccd
     >
-      <CuboidCollider args={[0.26, 0.26, 0.26]} />
-      <RoundedBox args={[0.5, 0.5, 0.5]} radius={0.06} smoothness={4} castShadow receiveShadow>
-        <meshStandardMaterial color={color} roughness={0.25} metalness={0.1} />
-      </RoundedBox>
-      {faceRotations.map((face) => (
-        <PipFace key={face.value} value={face.value} position={face.position} rotation={face.rotation} pipColor={pipColor} />
-      ))}
+      {/* Fixed mass so the toss impulses behave the same regardless of die size */}
+      <CuboidCollider args={[0.26 * DIE_SCALE, 0.26 * DIE_SCALE, 0.26 * DIE_SCALE]} mass={0.15} />
+      <group scale={DIE_SCALE}>
+        <RoundedBox args={[0.5, 0.5, 0.5]} radius={0.06} smoothness={4} castShadow receiveShadow>
+          <meshStandardMaterial color={color} roughness={0.25} metalness={0.1} />
+        </RoundedBox>
+        {faceRotations.map((face) => (
+          <PipFace key={face.value} value={face.value} position={face.position} rotation={face.rotation} pipColor={pipColor} />
+        ))}
+      </group>
     </RigidBody>
   );
 }
