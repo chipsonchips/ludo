@@ -1,6 +1,7 @@
 import { Suspense, useState, useCallback, useEffect, useRef } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { LudoBoard } from './LudoBoard';
 import { DiceMesh } from './DiceMesh';
@@ -14,11 +15,21 @@ const BOARD_TARGET = new THREE.Vector3(0, 0, 0);
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 12, 10);
 const ROLL_CAMERA_POS = new THREE.Vector3(0, 8, 8);
 
-function CinematicCamera() {
+/**
+ * Drives the "suggested" camera position/target when the player isn't dragging.
+ * OrbitControls re-derives its spherical state from camera.position every frame,
+ * so nudging camera.position/controls.target here (before OrbitControls updates)
+ * is respected as the new baseline without fighting user input.
+ */
+function CinematicCamera({ controlsRef, interactingRef }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  controlsRef: React.MutableRefObject<any>;
+  interactingRef: React.MutableRefObject<boolean>;
+}) {
   const { camera } = useThree();
   const ludo = useGameStore((s) => s.ludo);
   const isRolling = useGameStore((s) => s.isRolling);
-  
+
   const targetPos = useRef(DEFAULT_CAMERA_POS.clone());
   const targetLook = useRef(BOARD_TARGET.clone());
 
@@ -30,8 +41,9 @@ function CinematicCamera() {
       targetPos.current.set(0, 15, 15); // zoom out
     } else {
       targetPos.current.copy(DEFAULT_CAMERA_POS);
-      
+
       // Slight tilt toward active player
+      targetLook.current.copy(BOARD_TARGET);
       if (ludo.players[ludo.currentPlayerIndex]) {
         const color = ludo.players[ludo.currentPlayerIndex].color;
         const offset = 1.5;
@@ -43,23 +55,12 @@ function CinematicCamera() {
     }
   }, [isRolling, ludo.winnerId, ludo.currentPlayerIndex, ludo.players]);
 
-  useFrame((state, delta) => {
-    // Smooth camera interpolation
-    camera.position.lerp(targetPos.current, delta * 2);
-    
-    // Smooth lookat interpolation
-    // Assuming camera has a lookAt target, we can interpolate a dummy object or just lerp a vector and call lookAt
-    // But since OrbitControls are gone, we manage lookAt manually
-    // For simplicity, we just look at board center, slightly offset by orbit
-    
-    // Let's add slight idle orbit
-    if (!isRolling && !ludo.winnerId) {
-      const time = state.clock.elapsedTime;
-      camera.position.x += Math.sin(time * 0.2) * 0.02;
-      camera.position.z += Math.cos(time * 0.2) * 0.02;
-    }
+  useFrame((_state, delta) => {
+    // Let the player fully own the camera while they're dragging/zooming.
+    if (interactingRef.current) return;
 
-    camera.lookAt(targetLook.current);
+    camera.position.lerp(targetPos.current, delta * 2);
+    controlsRef.current?.target.lerp(targetLook.current, delta * 2);
   });
 
   return null;
@@ -178,6 +179,31 @@ export function GameScene() {
   const [particles, setParticles] = useState(false);
   const { play } = useSound();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const controlsRef = useRef<any>(null);
+  const interactingRef = useRef(false);
+  const resumeTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    return () => {
+      if (resumeTimeout.current) clearTimeout(resumeTimeout.current);
+    };
+  }, []);
+
+  const handleControlsStart = useCallback(() => {
+    interactingRef.current = true;
+    if (resumeTimeout.current) clearTimeout(resumeTimeout.current);
+    if (controlsRef.current) controlsRef.current.autoRotate = false;
+  }, []);
+
+  const handleControlsEnd = useCallback(() => {
+    if (resumeTimeout.current) clearTimeout(resumeTimeout.current);
+    resumeTimeout.current = setTimeout(() => {
+      interactingRef.current = false;
+      if (controlsRef.current) controlsRef.current.autoRotate = true;
+    }, 2500);
+  }, []);
+
   const handleRollComplete = useCallback(
     (values: number[]) => {
       if (values.includes(6)) {
@@ -199,11 +225,31 @@ export function GameScene() {
         camera={{ position: [0, 12, 10], fov: 42, near: 0.1, far: 100 }}
       >
         <color attach="background" args={['#0A0812']} />
-        <Suspense fallback={null}>
-          <CinematicCamera />
-          
-          <LoungeEnvironment />
 
+        <CinematicCamera controlsRef={controlsRef} interactingRef={interactingRef} />
+
+        <OrbitControls
+          ref={controlsRef}
+          makeDefault
+          target={[0, 0, 0]}
+          enableDamping
+          dampingFactor={0.08}
+          minDistance={5}
+          maxDistance={20}
+          minPolarAngle={0.15}
+          maxPolarAngle={Math.PI / 2 - 0.02}
+          autoRotate
+          autoRotateSpeed={0.4}
+          onStart={handleControlsStart}
+          onEnd={handleControlsEnd}
+        />
+
+        {/* Own Suspense boundary: the HDRI background/reflection load must never block the board from rendering */}
+        <Suspense fallback={null}>
+          <LoungeEnvironment />
+        </Suspense>
+
+        <Suspense fallback={null}>
           <LudoBoard
             ludo={ludo}
             selectedTokenId={selectedTokenId}
