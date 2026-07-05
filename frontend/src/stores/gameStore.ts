@@ -11,6 +11,7 @@ import {
   applyMove,
   colorsForPlayerCount,
   createInitialLudoState,
+  getBoostMoves,
   getLegalMoves,
   grantsExtraTurn,
   passTurn,
@@ -81,6 +82,8 @@ interface GameStore {
   /** Online: the dice visuals must land on these server-decided values. */
   forcedDiceValues: number[] | null;
   selectedTokenId: string | null;
+  /** Offline modes: the next token pick spends BOTH dice on one move. */
+  boostMode: boolean;
   chat: ChatEntry[];
   reactions: ReactionEntry[];
   elapsedSeconds: number;
@@ -95,6 +98,7 @@ interface GameStore {
   rollDice: () => void;
   completeRoll: (values: number[]) => void;
   selectToken: (tokenId: string) => void;
+  toggleBoost: () => void;
 
   applyServerState: (state: LudoState) => void;
   onServerRoll: (seat: Seat, values: number[]) => void;
@@ -145,6 +149,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       lastDiceValues: [],
       forcedDiceValues: null,
       selectedTokenId: null,
+      boostMode: false,
       chat: [],
       reactions: [],
       gameOver: null,
@@ -211,6 +216,21 @@ export const useGameStore = create<GameStore>((set, get) => {
     const roller = withDice.players[withDice.currentPlayerIndex];
 
     if (moves.length === 0) {
+      // No single-die move — a combined boost move may still save the turn
+      const boostMoves = roller.kind === 'human' ? getBoostMoves(withDice) : [];
+      if (boostMoves.length > 0) {
+        set({
+          isRolling: false,
+          lastDiceValues: values,
+          boostMode: true,
+          ludo: {
+            ...withDice,
+            selectableTokenIds: Array.from(new Set(boostMoves.map((m) => m.tokenId))),
+            message: `No single move fits — boost a token ${values.reduce((a, b) => a + b, 0)} steps!`,
+          },
+        });
+        return;
+      }
       const next: LudoState = {
         ...passTurn(withDice, extraTurn),
         message: extraTurn ? 'No legal moves, but the double six grants another roll.' : 'No legal move — turn passed.',
@@ -233,6 +253,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     set({
       isRolling: false,
       lastDiceValues: values,
+      boostMode: false,
       ludo: {
         ...withDice,
         selectableTokenIds: Array.from(new Set(moves.map((m) => m.tokenId))),
@@ -248,6 +269,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     lastDiceValues: [],
     forcedDiceValues: null,
     selectedTokenId: null,
+    boostMode: false,
     chat: [],
     reactions: [],
     elapsedSeconds: 0,
@@ -332,7 +354,41 @@ export const useGameStore = create<GameStore>((set, get) => {
         useRoomStore.getState().sendRoll();
         return; // isRolling flips when the server's roll_result arrives
       }
-      set({ isRolling: true, selectedTokenId: null });
+      set({ isRolling: true, selectedTokenId: null, boostMode: false });
+    },
+
+    toggleBoost: () => {
+      const { ludo, session, gameOver, boostMode } = get();
+      if (!session || session.mode === 'online' || gameOver) return;
+      if (ludo.phase !== 'select_token' || ludo.diceValues.length < 2) return;
+      const current = ludo.players[ludo.currentPlayerIndex];
+      if (current.kind !== 'human') return;
+
+      if (boostMode) {
+        // Back to spending dice one at a time
+        const moves = getLegalMoves(ludo);
+        set({
+          boostMode: false,
+          ludo: {
+            ...ludo,
+            selectableTokenIds: Array.from(new Set(moves.map((m) => m.tokenId))),
+            message: `Rolled ${ludo.diceValues.join(' & ')} — pick a token`,
+          },
+        });
+        return;
+      }
+
+      const boostMoves = getBoostMoves(ludo);
+      if (boostMoves.length === 0) return;
+      const total = ludo.diceValues.reduce((a, b) => a + b, 0);
+      set({
+        boostMode: true,
+        ludo: {
+          ...ludo,
+          selectableTokenIds: Array.from(new Set(boostMoves.map((m) => m.tokenId))),
+          message: `Boost — one token charges ${total} steps!`,
+        },
+      });
     },
 
     completeRoll: (values) => {
@@ -367,10 +423,11 @@ export const useGameStore = create<GameStore>((set, get) => {
       const current = ludo.players[ludo.currentPlayerIndex];
       if (current.kind !== 'human') return;
 
-      const moves = getLegalMoves(ludo);
+      const moves = get().boostMode ? getBoostMoves(ludo) : getLegalMoves(ludo);
       const move = moves.find((m) => m.tokenId === tokenId);
       if (!move) return;
 
+      if (move.usesAllDice) systemMessage(`${current.username} boosted a token ${move.dieValueUsed} steps.`);
       if (move.capture) systemMessage(`${current.username} captured a token.`);
       if (move.newLocation.kind === 'finished') systemMessage(`${current.username} brought a token home.`);
 
@@ -381,7 +438,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         else next = { ...next, selectableTokenIds: Array.from(new Set(remaining.map((m) => m.tokenId))) };
       }
 
-      set({ ludo: next, selectedTokenId: tokenId });
+      set({ ludo: next, selectedTokenId: tokenId, boostMode: false });
       setTimeout(() => set({ selectedTokenId: null }), 600);
 
       if (next.winnerId) {
