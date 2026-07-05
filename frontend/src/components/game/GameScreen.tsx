@@ -7,6 +7,7 @@ import { BottomBar } from './BottomBar';
 import { RoundInfo } from './RoundInfo';
 import { WinnerOverlay } from './WinnerOverlay';
 import { ReactionOverlay } from '../social/ReactionOverlay';
+import { TutorialCoach } from '../onboarding/TutorialCoach';
 import { IconSpinner, IconWifiOff } from '../icons';
 
 /** Online only: the opponent dropped and the server is holding their seat. */
@@ -59,6 +60,7 @@ export function GameScreen() {
       </div>
 
       <OpponentDisconnectedBanner />
+      <TutorialCoach />
       <WinnerOverlay />
 
       <div className="pointer-events-none absolute bottom-28 left-1/2 z-[2] -translate-x-1/2 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[10px] uppercase tracking-widest text-white/40 backdrop-blur-sm md:bottom-32">

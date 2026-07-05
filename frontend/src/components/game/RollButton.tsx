@@ -1,13 +1,67 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { getBoostMoves } from '@shared/ludo/gameLogic';
 import { useGameStore } from '@/stores/gameStore';
 import { useSound } from '@/hooks/useSound';
-import { IconDice, IconDieFace } from '../icons';
+import { IconDice, IconDieFace, IconPlus } from '../icons';
+
+/**
+ * Offline modes: merge both remaining dice into one supercharged move.
+ * Appears beside the roll button only while the choice is actually open.
+ */
+function BoostButton() {
+  const ludo = useGameStore((s) => s.ludo);
+  const session = useGameStore((s) => s.session);
+  const boostMode = useGameStore((s) => s.boostMode);
+  const toggleBoost = useGameStore((s) => s.toggleBoost);
+  const { play } = useSound();
+
+  const current = ludo.players[ludo.currentPlayerIndex];
+  const available =
+    session !== null &&
+    session.mode !== 'online' &&
+    current?.kind === 'human' &&
+    ludo.phase === 'select_token' &&
+    ludo.diceValues.length >= 2 &&
+    !ludo.winnerId &&
+    getBoostMoves(ludo).length > 0;
+
+  const total = ludo.diceValues.reduce((a, b) => a + b, 0);
+
+  return (
+    <AnimatePresence>
+      {available && (
+        <motion.button
+          className={`absolute left-full top-1/2 ml-2 flex h-11 w-11 -translate-y-1/2 flex-col items-center justify-center rounded-full border shadow-lg backdrop-blur-xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-game-gold/70 md:ml-3 md:h-12 md:w-12 ${
+            boostMode
+              ? 'border-game-gold bg-game-gold/25 text-game-gold shadow-[0_0_24px_rgba(246,183,60,0.45)]'
+              : 'border-game-gold/40 bg-game-glass text-game-gold/80 hover:border-game-gold hover:text-game-gold hover:shadow-[0_0_18px_rgba(246,183,60,0.3)]'
+          }`}
+          onClick={() => {
+            play('click');
+            toggleBoost();
+          }}
+          aria-label={`Boost: combine both dice into one ${total}-step move`}
+          aria-pressed={boostMode}
+          title={`Boost — one token moves ${total} steps`}
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.5 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+        >
+          <IconPlus size={16} />
+          <span className="font-display text-[10px] font-black leading-none">{total}</span>
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
 
 export function RollButton() {
   const isRolling = useGameStore((s) => s.isRolling);
   const rollDice = useGameStore((s) => s.rollDice);
   const ludo = useGameStore((s) => s.ludo);
   const lastDiceValues = useGameStore((s) => s.lastDiceValues);
+  const boostMode = useGameStore((s) => s.boostMode);
   const { play } = useSound();
 
   const current = ludo.players[ludo.currentPlayerIndex];
@@ -30,12 +84,16 @@ export function RollButton() {
         {isRolling
           ? 'Rolling…'
           : ludo.phase === 'select_token'
-            ? 'Pick a token'
+            ? boostMode
+              ? 'Boost — pick a token'
+              : 'Pick a token'
             : isMyTurn
               ? `${current.username === 'You' ? 'Your' : `${current.username}'s`} turn`
               : 'Waiting…'}
       </div>
 
+      <div className="relative">
+        <BoostButton />
       <motion.button
         className={`glass-panel relative flex h-14 w-48 items-center justify-center gap-3 overflow-hidden rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-game-gold/70 md:h-16 md:w-56 ${
           disabled
@@ -78,6 +136,7 @@ export function RollButton() {
           {showResult ? lastDiceValues.join(' & ') : 'Roll Dice'}
         </span>
       </motion.button>
+      </div>
     </div>
   );
 }
