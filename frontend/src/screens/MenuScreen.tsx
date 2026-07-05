@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { useAppStore } from '@/stores/appStore';
+import { useOnboardingStore } from '@/stores/onboardingStore';
 import { ScreenShell } from './ScreenShell';
-import { TextInput, FieldLabel } from '@/components/ui';
+import { WelcomeOverlay } from '@/components/onboarding/WelcomeOverlay';
+import { Button, TextInput, FieldLabel } from '@/components/ui';
 import {
   AVATARS,
   AvatarBadge,
@@ -37,6 +39,7 @@ const MODES = [
 
 export function MenuScreen() {
   const { identity, setIdentity, navigate } = useAppStore();
+  const openWelcome = useOnboardingStore((s) => s.openWelcome);
 
   return (
     <ScreenShell width="max-w-2xl">
@@ -125,6 +128,15 @@ export function MenuScreen() {
           </motion.button>
         ))}
       </div>
+
+      {/* Re-entry point for the first-visit tour */}
+      <div className="mt-5 flex justify-center">
+        <Button variant="subtle" onClick={openWelcome}>
+          How to play
+        </Button>
+      </div>
+
+      <WelcomeOverlay />
     </ScreenShell>
   );
 }
