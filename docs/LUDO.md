@@ -4,16 +4,29 @@
 
 | Rule | Behavior |
 |------|----------|
-| Setup | 2–4 players, 4 tokens each (Yellow, Blue, Green, Red) |
-| Objective | First to get all 4 tokens into HOME wins |
+| Setup | 4 houses, 4 tokens each (Yellow, Blue, Red, Green) |
+| One-on-one | Each player (bots included) runs **two houses** — crossed diagonals by default (Yellow+Red vs Blue+Green), or same-side rows with the Side-by-Side rule. House turns alternate owners; partner houses can't capture each other |
+| Objective | Bring every token you own home (8 in 1v1, 4 per house otherwise) |
 | Exit base | Must roll **6** to bring a token onto the starting square |
 | Movement | Tokens move clockwise; count matches die roll |
-| Rolling 6 | Bonus turn after completing the move |
+| Bonus roll | Twin dice: only a **double six** grants another roll. Single die: a 6 does |
 | Capturing | Landing on an opponent sends their token back to base |
 | Safe squares | ★ squares — no captures allowed |
-| Entering home | After a full lap, token enters colored home column |
-| Exact roll | Must roll exact count to reach final HOME cell |
-| Win | All 4 tokens finished in center |
+| Entering home | After rounding the board, a token turns into its own colored home lane |
+| Finishing | An exact roll carries it to the center — journey complete |
+
+## Configurable rules (agreed in the lobby)
+
+Defined once in `shared/ludo/rules.ts` (`RULE_DEFS`) and consumed by the
+engine, the lobby UI, and the wire protocol. See `docs/MULTIPLAYER.md`.
+
+| Rule | Default | Effect |
+|------|---------|--------|
+| Crossed Houses | off | Tokens finish in the diagonally opposite house (+26 squares) |
+| Twin Dice | on | Two dice per roll, spendable on one or two tokens; bonus roll only on double six |
+| Quick Start | off | Each player starts with one token already out |
+| Safe Squares | on | ★ squares shelter tokens from capture |
+| Side-by-Side Houses | off | 1v1 pairs sit on the same side of the board instead of crossed diagonals |
 
 ## Board layout
 
@@ -29,17 +42,22 @@ Classic 15×15 grid matching standard Ludo:
 ## Code map
 
 ```
-frontend/src/ludo/
-├── types.ts          # Token, player, game state
+shared/ludo/                # single source of truth for client AND server
+├── types.ts          # Token, player (human|bot|remote), game state
+├── rules.ts          # Configurable match rules registry
 ├── constants.ts      # Paths, safe squares, colors
-├── boardLayout.ts    # Grid → 3D positions
-└── gameLogic.ts      # Legal moves, captures, turns
+├── boardGrid.ts      # 15×15 grid definition
+├── gameLogic.ts      # Legal moves, captures, turns (rules-parametrized)
+└── ai.ts             # Bot move selection (easy / medium / hard)
+
+frontend/src/ludo/          # thin re-exports of shared + rendering helpers
+└── boardLayout.ts    # Grid → 3D positions
 
 frontend/src/scenes/
 ├── LudoBoard.tsx     # 3D board rendering
 └── LudoToken.tsx     # 3D pawn pieces
 
-dummy-data/ludoPlayers.ts   # 4-player mock setup
+backend/src/game.ts         # server-authoritative match (online mode)
 ```
 
 ## How to play (frontend)

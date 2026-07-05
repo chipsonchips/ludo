@@ -12,6 +12,22 @@
 
 StellarDice lets players wager USDC on the outcome of a dice roll. Every roll is verifiable on-chain using a commit-reveal scheme, eliminating any possibility of house manipulation. The smart contract logic is implemented as a Stellar Soroban smart contract, and the frontend is a lightweight React app that connects via Freighter or any WalletConnect-compatible Stellar wallet.
 
+### The Ludo lounge (playable today)
+
+The repo currently ships a full 3-D multiplayer Ludo game with three modes —
+single player vs. bots (easy/medium/hard), online two-player rooms with invite
+codes, and local pass-and-play — backed by a WebSocket room server with a
+server-authoritative game engine shared between client and server.
+
+```bash
+cd backend && npm install && npm run dev    # room server on :8787
+cd frontend && npm install && npm run dev   # game client on :5173
+```
+
+See [docs/MULTIPLAYER.md](./docs/MULTIPLAYER.md) for the room system,
+protocol, and design decisions, and [docs/LUDO.md](./docs/LUDO.md) for the
+game rules.
+
 ---
 
 ## Features
