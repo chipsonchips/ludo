@@ -35,11 +35,13 @@ interface DiceMeshProps {
   impulse?: [number, number, number];
   torque?: [number, number, number];
   onSettle?: (value: number) => void;
+  /** Rig the outcome: when the die settles, snap it so this face is up (server-authoritative rolls). */
+  forceValue?: number;
   color?: string;
   pipColor?: string;
 }
 
-export function DiceMesh({ position, impulse, torque, onSettle, color = '#f8f8ff', pipColor = '#1a1a2e' }: DiceMeshProps) {
+export function DiceMesh({ position, impulse, torque, onSettle, forceValue, color = '#f8f8ff', pipColor = '#1a1a2e' }: DiceMeshProps) {
   const ref = useRef<RapierRigidBody>(null);
   const settled = useRef(false);
   const settleTimer = useRef(0);
@@ -127,6 +129,19 @@ export function DiceMesh({ position, impulse, torque, onSettle, color = '#f8f8ff
             bestValue = faceValues[i];
           }
         });
+
+        if (forceValue && forceValue >= 1 && forceValue <= 6 && forceValue !== bestValue) {
+          // Server decided this roll: rotate the settled die so the required
+          // face points up (shortest arc from where physics left it).
+          const targetNormal = normals[faceValues.indexOf(forceValue)];
+          const worldTarget = targetNormal.clone().applyQuaternion(quat);
+          const correction = new THREE.Quaternion().setFromUnitVectors(worldTarget, up);
+          const fixed = correction.multiply(quat);
+          ref.current.setRotation({ x: fixed.x, y: fixed.y, z: fixed.z, w: fixed.w }, false);
+          onSettle?.(forceValue);
+          return;
+        }
+
         onSettle?.(bestValue);
       }
     } else {

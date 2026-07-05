@@ -89,6 +89,31 @@ const PINWHEEL_GEOMETRY: Record<LudoColor, THREE.ExtrudeGeometry> = {
   blue: makeTriShape([0, 0], [-HUB_H, HUB_H], [HUB_H, HUB_H]), // -Z
 };
 
+function makeStarShape(outer: number, inner: number): THREE.Shape {
+  const shape = new THREE.Shape();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? outer : inner;
+    const a = (i / 10) * Math.PI * 2 + Math.PI / 2;
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r;
+    if (i === 0) shape.moveTo(x, y);
+    else shape.lineTo(x, y);
+  }
+  shape.closePath();
+  return shape;
+}
+
+/** Flat safe-square star (real geometry — no glyphs on the board). */
+const STAR_GEOMETRY = new THREE.ShapeGeometry(makeStarShape(0.115, 0.048));
+
+const ARROW_SHAPE = new THREE.Shape();
+ARROW_SHAPE.moveTo(0.095, 0);
+ARROW_SHAPE.lineTo(-0.065, 0.075);
+ARROW_SHAPE.lineTo(-0.065, -0.075);
+ARROW_SHAPE.closePath();
+/** Start-square direction chevron, points along +X before the group's yaw. */
+const ARROW_GEOMETRY = new THREE.ShapeGeometry(ARROW_SHAPE);
+
 /** World-space heading (yaw, around Y) that each color's start arrow should point along the track */
 const START_ARROW_YAW: Record<LudoColor, number> = {
   yellow: 0,
@@ -133,16 +158,9 @@ function BoardCellMesh({ row, col, code }: RenderCell) {
       )}
       {/* Safe star */}
       {code === '*' && (
-        <Text
-          position={[0, height / 2 + 0.02, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          fontSize={0.2}
-          color="#1a1a2e"
-          anchorX="center"
-          anchorY="middle"
-        >
-          ★
-        </Text>
+        <mesh geometry={STAR_GEOMETRY} position={[0, height / 2 + 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <meshStandardMaterial color="#1a1a2e" roughness={0.5} />
+        </mesh>
       )}
       {/* Center HOME label */}
       {code.startsWith('C') && code !== 'CC' && (
@@ -161,16 +179,9 @@ function BoardCellMesh({ row, col, code }: RenderCell) {
       {/* Start arrow — points along the direction of travel for that color */}
       {(code === 'SY' || code === 'SB' || code === 'SG' || code === 'SR') && (
         <group rotation={[0, START_ARROW_YAW[codeToColor(code)!], 0]}>
-          <Text
-            position={[0, height / 2 + 0.02, 0]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            fontSize={0.14}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-          >
-            ▶
-          </Text>
+          <mesh geometry={ARROW_GEOMETRY} position={[0, height / 2 + 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <meshStandardMaterial color="#ffffff" roughness={0.4} />
+          </mesh>
         </group>
       )}
     </group>
@@ -275,7 +286,7 @@ export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardPro
       {/* Tokens */}
       {ludo.tokens.map((token) => {
         if (token.location.kind === 'finished') return null;
-        const pos = getTokenWorldPosition(token.location, token.color);
+        const pos = getTokenWorldPosition(token.location, token.color, ludo.rules);
         const isSelectable = ludo.selectableTokenIds.includes(token.id);
         return (
           <LudoTokenMesh
@@ -292,7 +303,7 @@ export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardPro
       {ludo.tokens
         .filter((t) => t.location.kind === 'finished')
         .map((token, i) => {
-          const pos = getTokenWorldPosition(token.location, token.color);
+          const pos = getTokenWorldPosition(token.location, token.color, ludo.rules);
           return (
             <LudoTokenMesh
               key={token.id}
@@ -304,9 +315,16 @@ export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardPro
           );
         })}
 
-      {/* Player nameplates, floating beside each player's own base */}
+      {/* Player nameplates, floating beside each player's own base(s).
+          The YOU chip only helps when exactly one person plays on this device. */}
       {ludo.players.map((player) => (
-        <PlayerBaseLabel key={player.id} player={player} />
+        <PlayerBaseLabel
+          key={player.id}
+          player={player}
+          markHuman={
+            new Set(ludo.players.filter((p) => p.kind === 'human').map((p) => p.ownerId)).size === 1
+          }
+        />
       ))}
     </group>
   );

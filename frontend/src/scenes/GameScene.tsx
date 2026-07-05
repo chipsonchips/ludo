@@ -1,5 +1,5 @@
 import { Suspense, useState, useCallback, useEffect, useRef } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -9,76 +9,44 @@ import { ParticleEffects } from './ParticleEffects';
 import { useGameStore } from '@/stores/gameStore';
 import { useSound } from '@/hooks/useSound';
 import { BOARD_CENTER } from '@/ludo/constants';
+import { diceCount } from '@shared/ludo/rules';
 import { LoungeEnvironment } from './LoungeEnvironment';
 
-const BOARD_TARGET = new THREE.Vector3(0, 0, 0);
-const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 12, 10);
-const ROLL_CAMERA_POS = new THREE.Vector3(0, 8, 8);
+interface DiceLaunch {
+  impulse: [number, number, number];
+  torque: [number, number, number];
+}
 
-/**
- * Drives the "suggested" camera position/target when the player isn't dragging.
- * OrbitControls re-derives its spherical state from camera.position every frame,
- * so nudging camera.position/controls.target here (before OrbitControls updates)
- * is respected as the new baseline without fighting user input.
- */
-function CinematicCamera({ controlsRef, interactingRef }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  controlsRef: React.MutableRefObject<any>;
-  interactingRef: React.MutableRefObject<boolean>;
-}) {
-  const { camera } = useThree();
-  const ludo = useGameStore((s) => s.ludo);
-  const isRolling = useGameStore((s) => s.isRolling);
-
-  const targetPos = useRef(DEFAULT_CAMERA_POS.clone());
-  const targetLook = useRef(BOARD_TARGET.clone());
-
-  useEffect(() => {
-    if (isRolling) {
-      targetPos.current.copy(ROLL_CAMERA_POS);
-      targetLook.current.copy(BOARD_TARGET);
-    } else if (ludo.winnerId) {
-      targetPos.current.set(0, 10, 10); // zoom out (stays inside the room walls)
-    } else {
-      targetPos.current.copy(DEFAULT_CAMERA_POS);
-
-      // Slight tilt toward active player
-      targetLook.current.copy(BOARD_TARGET);
-      if (ludo.players[ludo.currentPlayerIndex]) {
-        const color = ludo.players[ludo.currentPlayerIndex].color;
-        const offset = 1.5;
-        if (color === 'yellow') targetLook.current.set(-offset, 0, -offset);
-        if (color === 'blue') targetLook.current.set(offset, 0, -offset);
-        if (color === 'red') targetLook.current.set(offset, 0, offset);
-        if (color === 'green') targetLook.current.set(-offset, 0, offset);
-      }
-    }
-  }, [isRolling, ludo.winnerId, ludo.currentPlayerIndex, ludo.players]);
-
-  useFrame((_state, delta) => {
-    // Let the player fully own the camera while they're dragging/zooming.
-    if (interactingRef.current) return;
-
-    camera.position.lerp(targetPos.current, delta * 2);
-    controlsRef.current?.target.lerp(targetLook.current, delta * 2);
-  });
-
-  return null;
+function makeLaunch(): DiceLaunch {
+  return {
+    impulse: [
+      (Math.random() - 0.5) * 0.25,
+      0.3 + Math.random() * 0.2,
+      (Math.random() - 0.5) * 0.25,
+    ],
+    torque: [
+      (Math.random() - 0.5) * 2.5,
+      (Math.random() - 0.5) * 2.5,
+      (Math.random() - 0.5) * 2.5,
+    ],
+  };
 }
 
 function CenterDiceArena({
   isRolling,
+  count,
+  forcedValues,
   onRollComplete,
 }: {
   isRolling: boolean;
+  count: number;
+  /** Online games: the dice must land on these server-decided values. */
+  forcedValues: number[] | null;
   onRollComplete: (values: number[]) => void;
 }) {
   const [diceKey, setDiceKey] = useState(0);
   const [showDice, setShowDice] = useState(false);
-  const [impulse1, setImpulse1] = useState<[number, number, number] | undefined>();
-  const [impulse2, setImpulse2] = useState<[number, number, number] | undefined>();
-  const [torque1, setTorque1] = useState<[number, number, number] | undefined>();
-  const [torque2, setTorque2] = useState<[number, number, number] | undefined>();
+  const [launches, setLaunches] = useState<DiceLaunch[] | null>(null);
   const settledValues = useRef<number[]>([]);
   const { play } = useSound();
 
@@ -87,49 +55,23 @@ function CenterDiceArena({
     settledValues.current = [];
     setShowDice(true);
     setDiceKey((k) => k + 1);
-    
-    // Gentle toss — stays low and centered over the dais instead of flying up
-    setImpulse1([
-      (Math.random() - 0.5) * 0.25,
-      0.3 + Math.random() * 0.2,
-      (Math.random() - 0.5) * 0.25,
-    ]);
-    setImpulse2([
-      (Math.random() - 0.5) * 0.25,
-      0.3 + Math.random() * 0.2,
-      (Math.random() - 0.5) * 0.25,
-    ]);
-    setTorque1([
-      (Math.random() - 0.5) * 2.5,
-      (Math.random() - 0.5) * 2.5,
-      (Math.random() - 0.5) * 2.5,
-    ]);
-    setTorque2([
-      (Math.random() - 0.5) * 2.5,
-      (Math.random() - 0.5) * 2.5,
-      (Math.random() - 0.5) * 2.5,
-    ]);
+    setLaunches(Array.from({ length: count }, makeLaunch));
     play('roll');
-    setTimeout(() => {
-      setImpulse1(undefined);
-      setImpulse2(undefined);
-      setTorque1(undefined);
-      setTorque2(undefined);
-    }, 100);
-  }, [isRolling, play]);
+    setTimeout(() => setLaunches(null), 100);
+  }, [isRolling, count, play]);
 
   const handleSettle = useCallback(
     (value: number) => {
-      if (settledValues.current.length >= 2) return;
+      if (settledValues.current.length >= count) return;
       settledValues.current.push(value);
       play('land');
-      
-      if (settledValues.current.length === 2) {
+
+      if (settledValues.current.length === count) {
         onRollComplete([...settledValues.current]);
-        setTimeout(() => setShowDice(false), 2000); // Wait longer to show result
+        setTimeout(() => setShowDice(false), 2000); // linger so the result reads
       }
     },
-    [onRollComplete, play]
+    [count, onRollComplete, play]
   );
 
   useEffect(() => {
@@ -137,45 +79,43 @@ function CenterDiceArena({
   }, [isRolling, showDice, handleRoll]);
 
   // Watchdog: if a die escapes the arena or wedges without settling, the roll
-  // would hang the whole game (isRolling never clears). Salvage with random
-  // values for whatever hasn't reported in.
+  // would hang the whole game (isRolling never clears). Salvage with the
+  // forced/random values for whatever hasn't reported in.
   useEffect(() => {
     if (!isRolling) return;
     const timer = setTimeout(() => {
-      if (settledValues.current.length >= 2) return;
-      while (settledValues.current.length < 2) {
-        settledValues.current.push(1 + Math.floor(Math.random() * 6));
+      if (settledValues.current.length >= count) return;
+      while (settledValues.current.length < count) {
+        const i = settledValues.current.length;
+        settledValues.current.push(forcedValues?.[i] ?? 1 + Math.floor(Math.random() * 6));
       }
       onRollComplete([...settledValues.current]);
       setTimeout(() => setShowDice(false), 1500);
     }, 8000);
     return () => clearTimeout(timer);
-  }, [isRolling, onRollComplete]);
+  }, [isRolling, count, forcedValues, onRollComplete]);
+
+  const spread = count > 1 ? 0.15 : 0;
 
   return (
     <>
-      {showDice && (
-        <>
+      {showDice &&
+        Array.from({ length: count }, (_, i) => (
           <DiceMesh
-            key={`die1-${diceKey}`}
-            position={[BOARD_CENTER[0] - 0.15, BOARD_CENTER[1] + 0.6, BOARD_CENTER[2]]}
-            impulse={impulse1}
-            torque={torque1}
-            onSettle={(v) => handleSettle(v)}
-            color="#FFFaf0" // ivory
-            pipColor="#C9A84C" // gold pips
-          />
-          <DiceMesh
-            key={`die2-${diceKey}`}
-            position={[BOARD_CENTER[0] + 0.15, BOARD_CENTER[1] + 0.6, BOARD_CENTER[2]]}
-            impulse={impulse2}
-            torque={torque2}
-            onSettle={(v) => handleSettle(v)}
+            key={`die${i}-${diceKey}`}
+            position={[
+              BOARD_CENTER[0] + (i === 0 ? -spread : spread),
+              BOARD_CENTER[1] + 0.6,
+              BOARD_CENTER[2],
+            ]}
+            impulse={launches?.[i]?.impulse}
+            torque={launches?.[i]?.torque}
+            forceValue={forcedValues?.[i]}
+            onSettle={handleSettle}
             color="#FFFaf0"
             pipColor="#C9A84C"
           />
-        </>
-      )}
+        ))}
       {/* Physics collider for center dice arena */}
       <RigidBody type="fixed" colliders={false} position={BOARD_CENTER}>
         {/* Floor — thick slab so fast-falling dice can't tunnel through */}
@@ -191,26 +131,20 @@ function CenterDiceArena({
 }
 
 export function GameScene() {
-  const { ludo, isRolling, completeRoll, selectToken, selectedTokenId } = useGameStore();
+  const ludo = useGameStore((s) => s.ludo);
+  const isRolling = useGameStore((s) => s.isRolling);
+  const forcedDiceValues = useGameStore((s) => s.forcedDiceValues);
+  const completeRoll = useGameStore((s) => s.completeRoll);
+  const selectToken = useGameStore((s) => s.selectToken);
+  const selectedTokenId = useGameStore((s) => s.selectedTokenId);
   const [particles, setParticles] = useState(false);
   const { play } = useSound();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const controlsRef = useRef<any>(null);
-  const interactingRef = useRef(false);
-
-  // Once the player takes the camera, it's theirs: no auto-rotate resume, no
-  // cinematic drift back to the default framing.
-  const handleControlsStart = useCallback(() => {
-    interactingRef.current = true;
-    if (controlsRef.current) controlsRef.current.autoRotate = false;
-  }, []);
 
   const handleRollComplete = useCallback(
     (values: number[]) => {
       if (values.includes(6)) {
         setParticles(true);
-        play('win'); // mini win sound for a 6
+        play('win'); // mini celebration for a 6
         setTimeout(() => setParticles(false), 2000);
       }
       completeRoll(values);
@@ -228,10 +162,9 @@ export function GameScene() {
       >
         <color attach="background" args={['#0A0812']} />
 
-        <CinematicCamera controlsRef={controlsRef} interactingRef={interactingRef} />
-
+        {/* The camera is entirely the player's: no auto-rotate, no cinematic
+            drift — it stays exactly where they leave it. */}
         <OrbitControls
-          ref={controlsRef}
           makeDefault
           target={[0, 0, 0]}
           enableDamping
@@ -240,9 +173,6 @@ export function GameScene() {
           maxDistance={14}
           minPolarAngle={0.15}
           maxPolarAngle={Math.PI / 2 - 0.02}
-          autoRotate
-          autoRotateSpeed={0.4}
-          onStart={handleControlsStart}
         />
 
         <LoungeEnvironment />
@@ -255,7 +185,12 @@ export function GameScene() {
           />
 
           <Physics gravity={[0, -35, 0]}>
-            <CenterDiceArena isRolling={isRolling} onRollComplete={handleRollComplete} />
+            <CenterDiceArena
+              isRolling={isRolling}
+              count={diceCount(ludo.rules)}
+              forcedValues={forcedDiceValues}
+              onRollComplete={handleRollComplete}
+            />
           </Physics>
 
           <ParticleEffects active={particles} color="#F6B73C" />

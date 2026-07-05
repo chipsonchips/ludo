@@ -2,12 +2,15 @@ import { Html } from '@react-three/drei';
 import { gridToWorld, getColorHex } from '@/ludo/boardLayout';
 import { BASE_CENTER_CELLS } from '@/ludo/constants';
 import type { LudoPlayer } from '@/ludo/types';
+import { AvatarBadge } from '@/components/icons';
 
 interface PlayerBaseLabelProps {
   player: LudoPlayer;
+  /** Show the YOU chip (hidden in local pass-and-play where every seat is "you"). */
+  markHuman: boolean;
 }
 
-export function PlayerBaseLabel({ player }: PlayerBaseLabelProps) {
+export function PlayerBaseLabel({ player, markHuman }: PlayerBaseLabelProps) {
   const [row, col] = BASE_CENTER_CELLS[player.color];
   const position = gridToWorld(row, col, 0.9);
   const hex = getColorHex(player.color);
@@ -20,9 +23,9 @@ export function PlayerBaseLabel({ player }: PlayerBaseLabelProps) {
         }`}
         style={{ borderColor: player.isCurrentTurn ? hex : undefined }}
       >
-        <span className="text-base leading-none">{player.avatar}</span>
+        <AvatarBadge avatarId={player.avatarId} size={18} color={hex} />
         <span className="text-xs font-bold text-white drop-shadow-md">{player.username}</span>
-        {player.isLocalPlayer && (
+        {markHuman && player.kind === 'human' && (
           <span className="rounded border border-game-blue/30 bg-game-blue/10 px-1 py-0.5 font-display text-[7px] font-bold uppercase tracking-wider text-game-blue">
             YOU
           </span>
