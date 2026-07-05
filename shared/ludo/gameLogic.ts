@@ -78,6 +78,8 @@ export interface MoveOption {
   newLocation: TokenLocation;
   capture?: LudoToken;
   dieValueUsed: number;
+  /** Boost move: this move spends EVERY remaining die at once. */
+  usesAllDice?: boolean;
 }
 
 function simulateTrackMove(state: LudoState, token: LudoToken, steps: number): MoveOption | null {
@@ -170,6 +172,34 @@ export function getLegalMoves(state: LudoState): MoveOption[] {
   return moves;
 }
 
+/**
+ * Boost moves: combine ALL remaining dice into one big move for a single
+ * token. Only tokens already on the track or in the home lane qualify —
+ * leaving base still demands a plain six.
+ */
+export function getBoostMoves(state: LudoState): MoveOption[] {
+  if (state.diceValues.length < 2) return [];
+  const total = state.diceValues.reduce((sum, v) => sum + v, 0);
+
+  const owner = state.players[state.currentPlayerIndex].ownerId;
+  const ownedColors = new Set(
+    state.players.filter((p) => p.ownerId === owner).map((p) => p.color)
+  );
+
+  const moves: MoveOption[] = [];
+  for (const token of state.tokens) {
+    if (!ownedColors.has(token.color)) continue;
+    const m =
+      token.location.kind === 'track'
+        ? simulateTrackMove(state, token, total)
+        : token.location.kind === 'home'
+          ? simulateHomeMove(state, token, total)
+          : null;
+    if (m) moves.push({ ...m, usesAllDice: true });
+  }
+  return moves;
+}
+
 export function applyMove(state: LudoState, move: MoveOption): LudoState {
   let tokens = state.tokens.map((t) =>
     t.id === move.tokenId ? { ...t, location: move.newLocation } : { ...t }
@@ -183,9 +213,11 @@ export function applyMove(state: LudoState, move: MoveOption): LudoState {
     );
   }
 
-  const newDiceValues = [...state.diceValues];
-  const usedIdx = newDiceValues.indexOf(move.dieValueUsed);
-  if (usedIdx !== -1) newDiceValues.splice(usedIdx, 1);
+  const newDiceValues = move.usesAllDice ? [] : [...state.diceValues];
+  if (!move.usesAllDice) {
+    const usedIdx = newDiceValues.indexOf(move.dieValueUsed);
+    if (usedIdx !== -1) newDiceValues.splice(usedIdx, 1);
+  }
 
   // A player wins when EVERY house they own is home (8 tokens in 1v1)
   const mover = state.players[state.currentPlayerIndex];
