@@ -1,4 +1,4 @@
-import type { LudoColor, TokenLocation } from './types';
+import type { GameRules, LudoColor, TokenLocation } from './types';
 import {
   BASE_SLOTS,
   CENTER_CELLS,
@@ -8,6 +8,7 @@ import {
   MAIN_PATH,
   START_INDEX,
 } from './constants';
+import { homeLaneColor } from './gameLogic';
 import { BOARD_GRID, type CellCode } from './boardGrid';
 
 export interface RenderCell {
@@ -48,21 +49,27 @@ const TRACK_Y = 0.11; // 'W' path cells (safe-star cells sit ~0.015 higher, clos
 const HOME_LANE_Y = 0.125; // 'H*' cells
 const CENTER_HUB_Y = 0.19; // dais top, matches BOARD_CENTER
 
-export function getTokenWorldPosition(location: TokenLocation, color: LudoColor): [number, number, number] {
+export function getTokenWorldPosition(
+  location: TokenLocation,
+  color: LudoColor,
+  rules: GameRules
+): [number, number, number] {
   if (location.kind === 'base') {
     const [row, col] = BASE_SLOTS[color][location.slot];
     return gridToWorld(row, col, BASE_SLOT_Y);
   }
   if (location.kind === 'track') {
+    // Relative index can exceed one lap under Crossed Houses; wrap to the board.
     const globalIndex = (START_INDEX[color] + location.index) % MAIN_PATH.length;
     const [row, col] = MAIN_PATH[globalIndex];
     return gridToWorld(row, col, TRACK_Y);
   }
   if (location.kind === 'home') {
-    const [row, col] = HOME_PATHS[color][location.index];
+    const lane = HOME_PATHS[homeLaneColor(color, rules)];
+    const [row, col] = lane[location.index];
     return gridToWorld(row, col, HOME_LANE_Y);
   }
-  const [row, col] = CENTER_CELLS[color];
+  const [row, col] = CENTER_CELLS[homeLaneColor(color, rules)];
   return gridToWorld(row, col, CENTER_HUB_Y);
 }
 
