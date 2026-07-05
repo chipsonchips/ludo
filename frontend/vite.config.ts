@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@dummy': path.resolve(__dirname, '../dummy-data'),
+      '@shared': path.resolve(__dirname, '../shared'),
     },
   },
   server: {

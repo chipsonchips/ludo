@@ -19,8 +19,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@dummy/*": ["../dummy-data/*"]
+      "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "../shared"]
 }
