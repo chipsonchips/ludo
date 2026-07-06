@@ -1,12 +1,16 @@
 [build]
-  command = "npm install -g pnpm@latest && pnpm install && pnpm run build"
-  publish = "dist"
+command = "npm install -g pnpm@latest && pnpm install && pnpm run build"
+publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "18"
-  NPM_VERSION = "9"
+NODE_VERSION = "18"
+NPM_VERSION = "9"
 
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+from = "/*"
+to = "/index.html"
+status = 200
+
+## Deployment Configuration
+
+Use pnpm for consistent dependency management with npm fallback support.
