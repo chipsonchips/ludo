@@ -9,6 +9,9 @@ import { OnlineScreen } from '@/screens/OnlineScreen';
 import { LobbyScreen } from '@/screens/LobbyScreen';
 import { GameScreen } from '@/components/game/GameScreen';
 import { HubLink } from '@/components/HubLink';
+import { WalletProvider } from '@/lib/wagmiProvider';
+import { HubAutoConnect } from '@/components/wallet/HubAutoConnect';
+import { WalletBadge } from '@/components/wallet/WalletBadge';
 
 export default function App() {
   const screen = useAppStore((s) => s.screen);
@@ -19,9 +22,15 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <WalletProvider>
+      <HubAutoConnect />
       {/* Hidden in-game so it never overlaps the board HUD */}
-      {screen !== 'game' && <HubLink />}
+      {screen !== 'game' && (
+        <>
+          <HubLink />
+          <WalletBadge />
+        </>
+      )}
       <AnimatePresence mode="wait">
         {screen === 'menu' && <MenuScreen key="menu" />}
         {screen === 'single' && <SinglePlayerScreen key="single" />}
@@ -30,6 +39,6 @@ export default function App() {
         {screen === 'lobby' && <LobbyScreen key="lobby" />}
         {screen === 'game' && <GameScreen key="game" />}
       </AnimatePresence>
-    </>
+    </WalletProvider>
   );
 }
