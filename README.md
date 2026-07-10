@@ -20,8 +20,8 @@ codes, and local pass-and-play — backed by a WebSocket room server with a
 server-authoritative game engine shared between client and server.
 
 ```bash
-cd backend && npm install && npm run dev    # room server on :8787
-cd frontend && npm install && npm run dev   # game client on :5173
+cd backend && npm install && npm run dev    # room server on :5100
+cd frontend && npm install && npm run dev   # game client on :5000
 ```
 
 See [docs/MULTIPLAYER.md](./docs/MULTIPLAYER.md) for the room system,
@@ -46,12 +46,12 @@ game rules.
 
 ### Prerequisites
 
-| Tool | Version |
-|---|---|
-| Node.js | >= 18 |
-| Rust + Cargo | latest stable |
-| Stellar CLI (`stellar`) | >= 0.9 |
-| Freighter browser extension | latest |
+| Tool                        | Version       |
+| --------------------------- | ------------- |
+| Node.js                     | >= 18         |
+| Rust + Cargo                | latest stable |
+| Stellar CLI (`stellar`)     | >= 0.9        |
+| Freighter browser extension | latest        |
 
 ### 1. Clone the repo
 
@@ -91,7 +91,7 @@ stellar contract deploy \
 ```bash
 cd frontend
 npm run dev
-# Open http://localhost:5173
+# Open http://localhost:5000
 ```
 
 ---
@@ -124,10 +124,10 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for a full technical breakdown.
 
 ## Network Configuration
 
-| Network | RPC URL | Contract ID |
-|---|---|---|
+| Network | RPC URL                               | Contract ID                  |
+| ------- | ------------------------------------- | ---------------------------- |
 | Testnet | `https://soroban-testnet.stellar.org` | `CXXXXXXX...` (after deploy) |
-| Mainnet | `https://soroban-mainnet.stellar.org` | TBD |
+| Mainnet | `https://soroban-mainnet.stellar.org` | TBD                          |
 
 ---
 
