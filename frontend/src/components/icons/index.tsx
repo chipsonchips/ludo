@@ -3,13 +3,17 @@
  * 24px grid: 1.8px strokes, round caps, filled details in `currentColor`.
  * No emoji, no third-party icon fonts.
  */
-import type { ReactNode, SVGProps } from 'react';
+import type { ReactNode, SVGProps } from "react";
 
 export interface IconProps extends SVGProps<SVGSVGElement> {
   size?: number;
 }
 
-function Icon({ size = 20, children, ...rest }: IconProps & { children: ReactNode }) {
+function Icon({
+  size = 20,
+  children,
+  ...rest
+}: IconProps & { children: ReactNode }) {
   return (
     <svg
       width={size}
@@ -32,11 +36,36 @@ function Icon({ size = 20, children, ...rest }: IconProps & { children: ReactNod
 
 const PIPS: Record<number, [number, number][]> = {
   1: [[12, 12]],
-  2: [[8.6, 15.4], [15.4, 8.6]],
-  3: [[8.2, 15.8], [12, 12], [15.8, 8.2]],
-  4: [[8.6, 8.6], [15.4, 8.6], [8.6, 15.4], [15.4, 15.4]],
-  5: [[8.6, 8.6], [15.4, 8.6], [12, 12], [8.6, 15.4], [15.4, 15.4]],
-  6: [[8.6, 7.6], [15.4, 7.6], [8.6, 12], [15.4, 12], [8.6, 16.4], [15.4, 16.4]],
+  2: [
+    [8.6, 15.4],
+    [15.4, 8.6],
+  ],
+  3: [
+    [8.2, 15.8],
+    [12, 12],
+    [15.8, 8.2],
+  ],
+  4: [
+    [8.6, 8.6],
+    [15.4, 8.6],
+    [8.6, 15.4],
+    [15.4, 15.4],
+  ],
+  5: [
+    [8.6, 8.6],
+    [15.4, 8.6],
+    [12, 12],
+    [8.6, 15.4],
+    [15.4, 15.4],
+  ],
+  6: [
+    [8.6, 7.6],
+    [15.4, 7.6],
+    [8.6, 12],
+    [15.4, 12],
+    [8.6, 16.4],
+    [15.4, 16.4],
+  ],
 };
 
 export function IconDieFace({ value, ...rest }: IconProps & { value: number }) {
@@ -45,7 +74,14 @@ export function IconDieFace({ value, ...rest }: IconProps & { value: number }) {
     <Icon {...rest}>
       <rect x="3.5" y="3.5" width="17" height="17" rx="4.2" />
       {pips.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r="1.55" fill="currentColor" stroke="none" />
+        <circle
+          key={i}
+          cx={x}
+          cy={y}
+          r="1.55"
+          fill="currentColor"
+          stroke="none"
+        />
       ))}
     </Icon>
   );
@@ -292,7 +328,11 @@ export function IconHome(props: IconProps) {
 export function IconSparkle(props: IconProps) {
   return (
     <Icon {...props}>
-      <path d="M12 3.4 13.7 10.3 20.6 12 13.7 13.7 12 20.6 10.3 13.7 3.4 12 10.3 10.3Z" fill="currentColor" stroke="none" />
+      <path
+        d="M12 3.4 13.7 10.3 20.6 12 13.7 13.7 12 20.6 10.3 13.7 3.4 12 10.3 10.3Z"
+        fill="currentColor"
+        stroke="none"
+      />
     </Icon>
   );
 }
@@ -453,7 +493,12 @@ function GemGlyph() {
   return (
     <g fill="currentColor" stroke="none">
       <path d="M7.2 4h9.6l3.6 5.2L12 20.4 3.6 9.2Z" />
-      <path d="M7.2 4 12 9.2 16.8 4M3.6 9.2h16.8M12 9.2v11.2" stroke="rgba(0,0,0,0.28)" strokeWidth="1.1" fill="none" />
+      <path
+        d="M7.2 4 12 9.2 16.8 4M3.6 9.2h16.8M12 9.2v11.2"
+        stroke="rgba(0,0,0,0.28)"
+        strokeWidth="1.1"
+        fill="none"
+      />
     </g>
   );
 }
@@ -474,14 +519,14 @@ export interface AvatarDef {
 }
 
 export const AVATARS: AvatarDef[] = [
-  { id: 'pawn', label: 'Pawn', hue: '#F6B73C', Glyph: PawnGlyph },
-  { id: 'crown', label: 'Crown', hue: '#E9A13B', Glyph: CrownGlyph },
-  { id: 'star', label: 'Star', hue: '#8B5CF6', Glyph: StarGlyph },
-  { id: 'bolt', label: 'Bolt', hue: '#3B82F6', Glyph: BoltGlyph },
-  { id: 'flame', label: 'Flame', hue: '#EF6C3B', Glyph: FlameGlyph },
-  { id: 'target', label: 'Target', hue: '#22C55E', Glyph: TargetGlyph },
-  { id: 'gem', label: 'Gem', hue: '#06B6D4', Glyph: GemGlyph },
-  { id: 'moon', label: 'Moon', hue: '#A78BFA', Glyph: MoonGlyph },
+  { id: "pawn", label: "Pawn", hue: "#F6B73C", Glyph: PawnGlyph },
+  { id: "crown", label: "Crown", hue: "#E9A13B", Glyph: CrownGlyph },
+  { id: "star", label: "Star", hue: "#8B5CF6", Glyph: StarGlyph },
+  { id: "bolt", label: "Bolt", hue: "#3B82F6", Glyph: BoltGlyph },
+  { id: "flame", label: "Flame", hue: "#EF6C3B", Glyph: FlameGlyph },
+  { id: "target", label: "Target", hue: "#22C55E", Glyph: TargetGlyph },
+  { id: "gem", label: "Gem", hue: "#06B6D4", Glyph: GemGlyph },
+  { id: "moon", label: "Moon", hue: "#A78BFA", Glyph: MoonGlyph },
 ];
 
 const AVATAR_MAP = new Map(AVATARS.map((a) => [a.id, a]));
@@ -501,9 +546,22 @@ export function AvatarBadge({
   const def = AVATAR_MAP.get(avatarId) ?? AVATARS[0];
   const bg = color ?? def.hue;
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="11" fill={bg} opacity="0.22" />
-      <circle cx="12" cy="12" r="11" fill="none" stroke={bg} strokeWidth="1.4" />
+      <circle
+        cx="12"
+        cy="12"
+        r="11"
+        fill="none"
+        stroke={bg}
+        strokeWidth="1.4"
+      />
       <g style={{ color: bg }} transform="translate(2.9,2.9) scale(0.76)">
         <def.Glyph />
       </g>
@@ -521,14 +579,14 @@ export interface EmoteDef {
 }
 
 export const EMOTES: EmoteDef[] = [
-  { id: 'flame', label: 'On fire', Icon: IconFlame, color: '#EF6C3B' },
-  { id: 'laugh', label: 'Laugh', Icon: IconLaugh, color: '#F6B73C' },
-  { id: 'shock', label: 'Shocked', Icon: IconShock, color: '#A78BFA' },
-  { id: 'confetti', label: 'Party', Icon: IconConfetti, color: '#22C55E' },
-  { id: 'skull', label: 'Wrecked', Icon: IconSkull, color: '#9898A8' },
-  { id: 'clap', label: 'Applause', Icon: IconClap, color: '#3B82F6' },
-  { id: 'eyes', label: 'Watching', Icon: IconEyes, color: '#06B6D4' },
-  { id: 'crown', label: 'Royalty', Icon: IconCrown, color: '#E9A13B' },
+  { id: "flame", label: "On fire", Icon: IconFlame, color: "#EF6C3B" },
+  { id: "laugh", label: "Laugh", Icon: IconLaugh, color: "#F6B73C" },
+  { id: "shock", label: "Shocked", Icon: IconShock, color: "#A78BFA" },
+  { id: "confetti", label: "Party", Icon: IconConfetti, color: "#22C55E" },
+  { id: "skull", label: "Wrecked", Icon: IconSkull, color: "#9898A8" },
+  { id: "clap", label: "Applause", Icon: IconClap, color: "#3B82F6" },
+  { id: "eyes", label: "Watching", Icon: IconEyes, color: "#06B6D4" },
+  { id: "crown", label: "Royalty", Icon: IconCrown, color: "#E9A13B" },
 ];
 
 export const EMOTE_MAP = new Map(EMOTES.map((e) => [e.id, e]));
