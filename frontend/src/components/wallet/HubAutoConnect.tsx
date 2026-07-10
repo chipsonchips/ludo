@@ -1,12 +1,21 @@
 import { useEffect, useRef } from 'react';
 import { useAccount, useConnect } from 'wagmi';
-import { CHIPS_HUB_CONNECTOR_ID, getHubBridgeProvider } from '@/lib/chipsHubConnector';
+import {
+  CHIPS_HUB_CONNECTOR_ID,
+  getHubBridgeProvider,
+} from '@chipsonchips/shared/wallet-bridge';
 
 /**
  * Silently connects to the hub wallet when this app runs inside the
  * ChipsOnChips game iframe. Does nothing when opened directly — there's no
  * other connector configured, so wagmi just stays disconnected and nothing
  * in the existing game changes.
+ *
+ * `useAccount`/`useConnect` are imported from this app's own `wagmi`, not
+ * re-exported as a hook from @chipsonchips/shared: wagmi's React context is
+ * only shared correctly within a single wagmi module instance. Only the
+ * context-free pieces (the connector id and the bridge provider singleton)
+ * come from the shared package.
  */
 export function HubAutoConnect() {
   const { isConnected } = useAccount();
