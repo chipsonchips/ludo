@@ -109,14 +109,14 @@ sequenceDiagram
 
 ### 3.1 Room Model
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Public room identifier (e.g. `ROOM-7X9K2`) |
-| `mode` | enum | `single`, `1v1`, `3player`, `4player` |
-| `host_id` | UUID | Room creator |
-| `is_private` | bool | Public vs invite-only |
-| `state` | enum | `waiting`, `active`, `finished` |
-| `settings` | JSON | Target score, round limit, rules |
+| Field        | Type | Description                                |
+| ------------ | ---- | ------------------------------------------ |
+| `id`         | UUID | Public room identifier (e.g. `ROOM-7X9K2`) |
+| `mode`       | enum | `single`, `1v1`, `3player`, `4player`      |
+| `host_id`    | UUID | Room creator                               |
+| `is_private` | bool | Public vs invite-only                      |
+| `state`      | enum | `waiting`, `active`, `finished`            |
+| `settings`   | JSON | Target score, round limit, rules           |
 
 ### 3.2 Authoritative Server
 
@@ -144,14 +144,14 @@ Algorithm:
 
 ### 3.3 Sync Strategy
 
-| Data | Transport | Frequency |
-|------|-----------|-----------|
-| Game state | WebSocket | Event-driven |
-| Dice rolls | WebSocket | Per roll |
-| Reactions/emotes | WebSocket | Real-time |
-| Chat | WebSocket | Real-time |
-| Voice | WebRTC (LiveKit) | Continuous |
-| Presence | WebSocket + heartbeat | 5s interval |
+| Data             | Transport             | Frequency    |
+| ---------------- | --------------------- | ------------ |
+| Game state       | WebSocket             | Event-driven |
+| Dice rolls       | WebSocket             | Per roll     |
+| Reactions/emotes | WebSocket             | Real-time    |
+| Chat             | WebSocket             | Real-time    |
+| Voice            | WebRTC (LiveKit)      | Continuous   |
+| Presence         | WebSocket + heartbeat | 5s interval  |
 
 ---
 
@@ -370,6 +370,7 @@ graph LR
 ```
 
 **Connection lifecycle:**
+
 1. Client authenticates via JWT in WebSocket handshake
 2. Gateway assigns to least-loaded node (sticky sessions by room)
 3. Room events published to Redis channel `room:{id}`
@@ -490,71 +491,76 @@ graph TB
 
 ### Camera Behavior
 
-| Event | Camera |
-|-------|--------|
-| Idle | Elevated 45° overview `[0, 5, 5]` |
-| Rolling | GSAP zoom to `[0, 4.5, 3.5]` |
-| Win | Orbit + particle burst |
-| Turn change | Subtle pan toward active player |
+| Event       | Camera                            |
+| ----------- | --------------------------------- |
+| Idle        | Elevated 45° overview `[0, 5, 5]` |
+| Rolling     | GSAP zoom to `[0, 4.5, 3.5]`      |
+| Win         | Orbit + particle burst            |
+| Turn change | Subtle pan toward active player   |
 
 ### Material Palette
 
-| Element | Color | Material |
-|---------|-------|----------|
-| Table wood | `#2a1810` | Roughness 0.6 |
-| Felt arena | `#1a3a2a` | Roughness 0.9 |
+| Element      | Color     | Material      |
+| ------------ | --------- | ------------- |
+| Table wood   | `#2a1810` | Roughness 0.6 |
+| Felt arena   | `#1a3a2a` | Roughness 0.9 |
 | Dice (white) | `#f8f8ff` | Metalness 0.1 |
 | Dice (black) | `#1a1a2e` | Metalness 0.1 |
-| Gold accent | `#f59e0b` | Emissive 0.15 |
+| Gold accent  | `#f59e0b` | Emissive 0.15 |
 
 ---
 
 ## 11. Recommended Tech Stack
 
 ### Frontend
-| Layer | Technology |
-|-------|-----------|
-| Framework | React 18 + TypeScript |
-| Build | Vite |
-| 3D | Three.js + React Three Fiber + Drei |
-| Physics | Rapier (@react-three/rapier) |
-| Animation | GSAP + Framer Motion |
-| State | Zustand |
-| Audio | Web Audio API |
-| Voice | LiveKit React SDK |
-| Styling | CSS Modules + CSS Variables |
+
+| Layer     | Technology                          |
+| --------- | ----------------------------------- |
+| Framework | React 18 + TypeScript               |
+| Build     | Vite                                |
+| 3D        | Three.js + React Three Fiber + Drei |
+| Physics   | Rapier (@react-three/rapier)        |
+| Animation | GSAP + Framer Motion                |
+| State     | Zustand                             |
+| Audio     | Web Audio API                       |
+| Voice     | LiveKit React SDK                   |
+| Styling   | CSS Modules + CSS Variables         |
 
 ### Backend
-| Layer | Technology |
-|-------|-----------|
-| API | Node.js (Fastify) or Go |
-| WebSocket | Socket.io or uWebSockets |
-| Database | PostgreSQL |
-| Cache/Queue | Redis |
-| Voice | LiveKit Server |
-| Auth | JWT + OAuth (Google, Discord) |
-| Deploy | Docker + Kubernetes |
+
+| Layer       | Technology                    |
+| ----------- | ----------------------------- |
+| API         | Node.js (Fastify) or Go       |
+| WebSocket   | Socket.io or uWebSockets      |
+| Database    | PostgreSQL                    |
+| Cache/Queue | Redis                         |
+| Voice       | LiveKit Server                |
+| Auth        | JWT + OAuth (Google, Discord) |
+| Deploy      | Docker + Kubernetes           |
 
 ### Infrastructure
-| Service | Provider |
-|---------|----------|
-| Hosting | Vercel (FE) + Railway/Fly (BE) |
-| CDN | Cloudflare |
-| Monitoring | Sentry + Datadog |
-| CI/CD | GitHub Actions |
+
+| Service    | Provider                       |
+| ---------- | ------------------------------ |
+| Hosting    | Vercel (FE) + Railway/Fly (BE) |
+| CDN        | Cloudflare                     |
+| Monitoring | Sentry + Datadog               |
+| CI/CD      | GitHub Actions                 |
 
 ### Blockchain (Future)
-| Layer | Technology |
-|-------|-----------|
-| Network | Stellar (existing repo context) |
-| Contracts | Soroban (Rust) |
-| Wallet | Freighter |
+
+| Layer     | Technology                      |
+| --------- | ------------------------------- |
+| Network   | Stellar (existing repo context) |
+| Contracts | Soroban (Rust)                  |
+| Wallet    | Freighter                       |
 
 ---
 
 ## 12. Development Roadmap
 
 ### Phase 1 — MVP (4-6 weeks) ✅ Frontend prototype
+
 - [x] 3D game screen with physics dice
 - [x] HUD layout (top/center/bottom)
 - [x] Dummy data integration
@@ -566,6 +572,7 @@ graph TB
 - [ ] User auth
 
 ### Phase 2 — Multiplayer Core (4-6 weeks)
+
 - [ ] Room creation + invite links
 - [ ] Real-time game state sync
 - [ ] Matchmaking queue
@@ -574,6 +581,7 @@ graph TB
 - [ ] Server-authoritative dice
 
 ### Phase 3 — Competitive (3-4 weeks)
+
 - [ ] Ranking system (Bronze → Diamond)
 - [ ] Player statistics dashboard
 - [ ] Global leaderboard
@@ -581,6 +589,7 @@ graph TB
 - [ ] Anti-cheat validation
 
 ### Phase 4 — Social & Polish (3-4 weeks)
+
 - [ ] Single player AI (adaptive difficulty)
 - [ ] Tutorial mode
 - [ ] Sound design + music
@@ -588,6 +597,7 @@ graph TB
 - [ ] Performance profiling (60fps target)
 
 ### Phase 5 — Monetization (4-6 weeks)
+
 - [ ] Tournament mode
 - [ ] Entry fees + reward pools
 - [ ] Battle Pass seasons
@@ -596,6 +606,7 @@ graph TB
 - [ ] Seasonal events
 
 ### Phase 6 — Production (ongoing)
+
 - [ ] Load testing (1000+ concurrent rooms)
 - [ ] Global deployment
 - [ ] Analytics pipeline
@@ -610,7 +621,7 @@ graph TB
 cd frontend
 npm install
 npm run dev
-# Open http://localhost:5173
+# Open http://localhost:5000
 ```
 
 The game screen loads with dummy data from `dummy-data/`. Replace store initialization with API/WebSocket calls when backend is ready.
