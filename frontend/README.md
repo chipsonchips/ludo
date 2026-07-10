@@ -7,18 +7,18 @@ Premium 3D multiplayer dice game experience built with React Three Fiber.
 ```bash
 npm install
 npm run dev
-# Open http://localhost:5173
+# Open http://localhost:5000
 ```
 
 ## Structure
 
-| Path | Purpose |
-|------|---------|
-| `src/scenes/` | 3D WebGL scene (table, dice physics, particles) |
-| `src/components/game/` | Game HUD (top bar, bottom bar, player panel) |
-| `src/components/social/` | Chat, emotes, voice controls, reactions |
-| `src/stores/` | Zustand state management |
-| `../dummy-data/` | Mock game data (replace with API later) |
+| Path                     | Purpose                                         |
+| ------------------------ | ----------------------------------------------- |
+| `src/scenes/`            | 3D WebGL scene (table, dice physics, particles) |
+| `src/components/game/`   | Game HUD (top bar, bottom bar, player panel)    |
+| `src/components/social/` | Chat, emotes, voice controls, reactions         |
+| `src/stores/`            | Zustand state management                        |
+| `../dummy-data/`         | Mock game data (replace with API later)         |
 
 ## Tech Stack
 
