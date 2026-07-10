@@ -2,9 +2,14 @@ import { type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { base, celo } from 'wagmi/chains';
-import { chipsHubConnector } from './chipsHubConnector';
+import { chipsHubConnector } from '@chipsonchips/shared/wallet-bridge';
 
 const queryClient = new QueryClient();
+
+const hubOrigins = (import.meta.env.VITE_HUB_ORIGINS as string | undefined)
+  ?.split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 /**
  * chipsHubConnector is the only connector: ludo has no standalone wallet UI
@@ -14,7 +19,7 @@ const queryClient = new QueryClient();
  */
 export const wagmiConfig = createConfig({
   chains: [base, celo],
-  connectors: [chipsHubConnector()],
+  connectors: [chipsHubConnector({ allowedOrigins: hubOrigins })],
   transports: {
     [base.id]: http('https://mainnet.base.org'),
     [celo.id]: http('https://forno.celo.org'),
