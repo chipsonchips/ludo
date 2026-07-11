@@ -18,7 +18,10 @@ const hubOrigins = (import.meta.env.VITE_HUB_ORIGINS as string | undefined)
  * nothing in the existing game breaks.
  */
 export const wagmiConfig = createConfig({
-  chains: [base, celo],
+  // Celo first: wagmi falls back to chains[0] as the initial/default chainId
+  // before a wallet connects. Celo is the only chain with ChipsBank deployed
+  // right now — keep this first until Base's ChipsBank ships too.
+  chains: [celo, base],
   connectors: [chipsHubConnector({ allowedOrigins: hubOrigins })],
   transports: {
     [base.id]: http('https://mainnet.base.org'),
