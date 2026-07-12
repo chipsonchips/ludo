@@ -1,4 +1,4 @@
-# StellarDice Frontend
+# LuduChips Frontend
 
 Premium 3D multiplayer dice game experience built with React Three Fiber.
 

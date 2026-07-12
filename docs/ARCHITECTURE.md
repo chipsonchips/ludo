@@ -1,4 +1,4 @@
-# StellarDice — Product Architecture
+# LuduChips — Product Architecture
 
 > Premium real-time multiplayer dice game platform combining casual gaming, social interaction, and competitive gameplay.
 

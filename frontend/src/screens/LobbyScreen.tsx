@@ -149,8 +149,8 @@ export function LobbyScreen() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "StellarDice",
-          text: `Join my StellarDice room ${room.code}`,
+          title: "LuduChips",
+          text: `Join my LuduChips room ${room.code}`,
           url: link,
         });
         return;

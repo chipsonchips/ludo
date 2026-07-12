@@ -7,7 +7,7 @@ export interface Identity {
   avatarId: string;
 }
 
-const IDENTITY_KEY = 'stellardice.identity';
+const IDENTITY_KEY = 'luduchips.identity';
 
 function loadIdentity(): Identity {
   try {

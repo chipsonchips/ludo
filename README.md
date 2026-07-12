@@ -1,4 +1,4 @@
-# 🎲 StellarDice
+# 🎲 LuduChips
 
 > A decentralized dice betting game built on the Stellar blockchain — provably fair, fully transparent, and non-custodial.
 
@@ -10,7 +10,7 @@
 
 ## Overview
 
-StellarDice lets players wager USDC on the outcome of a dice roll. Every roll is verifiable on-chain using a commit-reveal scheme, eliminating any possibility of house manipulation. The smart contract logic is implemented as a Stellar Soroban smart contract, and the frontend is a lightweight React app that connects via Freighter or any WalletConnect-compatible Stellar wallet.
+LuduChips lets players wager USDC on the outcome of a dice roll. Every roll is verifiable on-chain using a commit-reveal scheme, eliminating any possibility of house manipulation. The smart contract logic is implemented as a Stellar Soroban smart contract, and the frontend is a lightweight React app that connects via Freighter or any WalletConnect-compatible Stellar wallet.
 
 ### The Ludo lounge (playable today)
 
@@ -149,4 +149,4 @@ We welcome contributions of all kinds. See [CONTRIBUTING.md](./CONTRIBUTING.md) 
 
 ## License
 
-MIT © 2026 StellarDice Contributors
+MIT © 2026 LuduChips Contributors

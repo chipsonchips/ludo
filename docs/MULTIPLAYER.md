@@ -1,4 +1,4 @@
-# StellarDice — Multiplayer Architecture (implemented)
+# LuduChips — Multiplayer Architecture (implemented)
 
 This documents the multiplayer system as it exists in the repo today (unlike
 `ARCHITECTURE.md`, which sketches the long-term product vision).
