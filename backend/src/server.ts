@@ -1,5 +1,5 @@
 /**
- * StellarDice room server: a single Node process holding all live rooms in
+ * LuduChips room server: a single Node process holding all live rooms in
  * memory, speaking the shared JSON protocol over WebSockets.
  *
  *   PORT (default 5100)   HTTP health endpoint + WS upgrade on the same port
@@ -10,7 +10,8 @@ import { RoomError, RoomManager } from './rooms';
 import type { ClientMessage, ServerMessage } from '../../shared/protocol';
 
 const PORT = Number(process.env.PORT ?? 5100);
-const MAX_FRAME_BYTES = 4096;
+// Large enough for WebRTC SDP offers (voice signaling), which can run 10KB+.
+const MAX_FRAME_BYTES = 32 * 1024;
 const HEARTBEAT_MS = 30_000;
 const SWEEP_MS = 60_000;
 
@@ -61,6 +62,7 @@ wss.on('connection', (ws) => {
         case 'move': manager.move(ws, msg.tokenId); break;
         case 'chat': manager.chat(ws, msg.text); break;
         case 'reaction': manager.reaction(ws, msg.icon); break;
+        case 'voice_signal': manager.voiceSignal(ws, msg.signal); break;
         case 'leave': manager.leave(ws); break;
         default:
           send(ws, { t: 'error', code: 'invalid_message', message: 'Unknown message type.' });

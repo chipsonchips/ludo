@@ -9,8 +9,9 @@ import { connection } from '@/net/client';
 import type { ConnectionStatus } from '@/net/connection';
 import { useAppStore } from './appStore';
 import { useGameStore } from './gameStore';
+import { useVoiceStore } from './voiceStore';
 
-const SESSION_KEY = 'stellardice.session';
+const SESSION_KEY = 'luduchips.session';
 
 interface StoredSession {
   code: string;
@@ -74,6 +75,7 @@ export const useRoomStore = create<RoomStore>((set, get) => {
         playerToken = msg.playerToken;
         saveSession({ code: msg.room.code, token: msg.playerToken });
         set({ seat: msg.seat, room: msg.room, pending: null, lastError: null, roomClosedReason: null });
+        useVoiceStore.getState()._setSeat(msg.seat);
         if (app.screen !== 'game') app.navigate('lobby');
         break;
 
@@ -115,12 +117,17 @@ export const useRoomStore = create<RoomStore>((set, get) => {
         if (msg.seat !== get().seat) game.receiveReaction(msg.icon);
         break;
 
+      case 'voice_signal':
+        if (msg.seat !== get().seat) useVoiceStore.getState()._handleSignal(msg.signal);
+        break;
+
       case 'opponent_connection':
         set({
           opponentDisconnected: msg.connected
             ? null
             : { seat: msg.seat, graceSeconds: msg.graceSeconds ?? 90 },
         });
+        useVoiceStore.getState()._onPeerConnectivity(msg.connected);
         break;
 
       case 'game_over':
@@ -131,6 +138,7 @@ export const useRoomStore = create<RoomStore>((set, get) => {
       case 'room_closed':
         playerToken = null;
         saveSession(null);
+        useVoiceStore.getState()._reset();
         set({ room: null, seat: null, roomClosedReason: msg.reason, opponentDisconnected: null });
         if (useAppStore.getState().screen === 'lobby') useAppStore.getState().navigate('online');
         break;
@@ -216,6 +224,7 @@ export const useRoomStore = create<RoomStore>((set, get) => {
     },
 
     leaveRoom: () => {
+      useVoiceStore.getState()._reset();
       connection.send({ t: 'leave' });
       playerToken = null;
       saveSession(null);

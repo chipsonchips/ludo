@@ -35,6 +35,27 @@ export interface RoomSnapshot {
 
 export type GameOverReason = 'finished' | 'forfeit' | 'left';
 
+// ── Voice chat signaling ───────────────────────────────────────────
+// The server never inspects these payloads — it relays them verbatim to the
+// other seat so the two clients can negotiate a direct WebRTC audio call.
+
+export type VoiceSignal =
+  /** "I opened / closed my voice channel" (also carries the mute state). */
+  | { kind: 'presence'; active: boolean; muted: boolean }
+  | { kind: 'offer'; sdp: string }
+  | { kind: 'answer'; sdp: string }
+  | { kind: 'ice'; candidate: RTCIceCandidateInit | null }
+  /** Explicit hang-up so the peer can tear down immediately. */
+  | { kind: 'bye' };
+
+// Structural stand-in so the backend compiles without DOM lib types.
+export interface RTCIceCandidateInit {
+  candidate?: string;
+  sdpMLineIndex?: number | null;
+  sdpMid?: string | null;
+  usernameFragment?: string | null;
+}
+
 // ── Client → Server ────────────────────────────────────────────────
 
 export type ClientMessage =
@@ -48,6 +69,7 @@ export type ClientMessage =
   | { t: 'move'; tokenId: string }
   | { t: 'chat'; text: string }
   | { t: 'reaction'; icon: string }
+  | { t: 'voice_signal'; signal: VoiceSignal }
   | { t: 'leave' };
 
 // ── Server → Client ────────────────────────────────────────────────
@@ -60,6 +82,7 @@ export type ServerMessage =
   | { t: 'game_state'; state: LudoState }
   | { t: 'chat'; seat: Seat; name: string; text: string; ts: number }
   | { t: 'reaction'; seat: Seat; icon: string }
+  | { t: 'voice_signal'; seat: Seat; signal: VoiceSignal }
   | { t: 'opponent_connection'; seat: Seat; connected: boolean; graceSeconds?: number }
   | { t: 'game_over'; winnerSeat: Seat; reason: GameOverReason; state?: LudoState }
   | { t: 'room_closed'; reason: string }

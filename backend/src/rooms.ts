@@ -20,6 +20,7 @@ import {
   type RoomStatus,
   type Seat,
   type ServerMessage,
+  type VoiceSignal,
 } from '../../shared/protocol';
 
 export class RoomError extends Error {
@@ -414,6 +415,20 @@ export class RoomManager {
     const clean = String(icon ?? '').trim().slice(0, 32);
     if (!/^[a-z-]+$/.test(clean)) return;
     this.broadcast(room, { t: 'reaction', seat, icon: clean });
+  }
+
+  /**
+   * WebRTC voice signaling: relay the payload verbatim to the other seat.
+   * The server never parses SDP — it only checks the envelope shape.
+   */
+  voiceSignal(ws: WebSocket, signal: unknown): void {
+    const { room, seat } = this.requireSession(ws);
+    if (typeof signal !== 'object' || signal === null) return;
+    const kind = (signal as { kind?: unknown }).kind;
+    if (kind !== 'presence' && kind !== 'offer' && kind !== 'answer' && kind !== 'ice' && kind !== 'bye') return;
+    const other = room.seats[1 - seat];
+    if (!other) return;
+    this.send(other.ws, { t: 'voice_signal', seat, signal: signal as VoiceSignal });
   }
 
   // ── Housekeeping ────────────────────────────────────────────────
