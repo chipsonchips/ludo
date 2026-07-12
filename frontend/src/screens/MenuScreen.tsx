@@ -4,6 +4,7 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { ScreenShell } from './ScreenShell';
 import { WelcomeOverlay } from '@/components/onboarding/WelcomeOverlay';
 import { Button, TextInput, FieldLabel } from '@/components/ui';
+import { ChipBalanceBadge } from '@/components/chips/ChipBalanceBadge';
 import {
   AVATARS,
   AvatarBadge,
@@ -53,12 +54,15 @@ export function MenuScreen() {
         >
           <IconDice size={52} />
         </motion.div>
-        <h1 className="font-display text-3xl font-black tracking-[0.3em] text-white">
-          STELLAR<span className="text-game-gold">DICE</span>
+        <h1 className="font-display text-2xl font-black tracking-[0.3em] text-white sm:text-3xl">
+          LUDU<span className="text-game-gold">CHIPS</span>
         </h1>
         <p className="mt-2 text-[13px] tracking-wide text-game-secondary">
           Ludo, after dark — a high-stakes lounge for two dice and four houses.
         </p>
+        <div className="mt-3">
+          <ChipBalanceBadge />
+        </div>
       </div>
 
       {/* Identity */}

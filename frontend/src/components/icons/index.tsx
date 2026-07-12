@@ -1,5 +1,5 @@
 /**
- * StellarDice icon set — every glyph in the product is drawn here by hand on a
+ * LuduChips icon set — every glyph in the product is drawn here by hand on a
  * 24px grid: 1.8px strokes, round caps, filled details in `currentColor`.
  * No emoji, no third-party icon fonts.
  */
@@ -297,6 +297,14 @@ export function IconPlus(props: IconProps) {
   );
 }
 
+export function IconChevronDown(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m5.5 9 6.5 6.5L18.5 9" />
+    </Icon>
+  );
+}
+
 export function IconLeave(props: IconProps) {
   return (
     <Icon {...props}>
@@ -429,6 +437,18 @@ export function IconBolt(props: IconProps) {
   return (
     <Icon {...props}>
       <path d="M13.2 3.2 5.6 13.6h4.6L10.8 20.8 18.4 10.4h-4.6Z" />
+    </Icon>
+  );
+}
+
+/** Casino chip: outer ring with edge ticks around an inner disc. */
+export function IconChip(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx={12} cy={12} r={9} />
+      <circle cx={12} cy={12} r={4.1} />
+      <path d="M12 3v3.4M12 17.6V21M3 12h3.4M17.6 12H21" />
+      <path d="M5.65 5.65l2.3 2.3M18.35 18.35l-2.3-2.3M18.35 5.65l-2.3 2.3M5.65 18.35l2.3-2.3" />
     </Icon>
   );
 }

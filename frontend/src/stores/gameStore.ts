@@ -23,8 +23,12 @@ import type { AiDifficulty, LudoPlayerDef, LudoState } from '@shared/ludo/types'
 import type { GameOverReason, Seat } from '@shared/protocol';
 import { useRoomStore } from './roomStore';
 import { useAppStore } from './appStore';
+import { useChipsStore } from './chipsStore';
 
 export type GameMode = 'single' | 'local' | 'online';
+
+/** Which arena hosts the match: the flat casino table (normal play) or the 3D lounge (tournament tables). */
+export type ArenaMode = 'table' | 'lounge';
 
 export interface MatchSession {
   mode: GameMode;
@@ -32,6 +36,11 @@ export interface MatchSession {
   difficulty: AiDifficulty;
   /** Index into ludo.players that this device's primary player holds (-1 = every seat is local). */
   mySeatIndex: number;
+  arena: ArenaMode;
+  /** Chips each player bought in with (0 = friendly table). */
+  stake: number;
+  /** Total chips riding on the table — stake × players, winner takes it. */
+  pot: number;
 }
 
 export interface ChatEntry {
@@ -89,9 +98,8 @@ interface GameStore {
   elapsedSeconds: number;
   gameOver: GameOverInfo | null;
   showChat: boolean;
-  voiceMuted: boolean;
 
-  startSinglePlayer: (opts: { bots: number; difficulty: AiDifficulty; rules: GameRules }) => void;
+  startSinglePlayer: (opts: { bots: number; difficulty: AiDifficulty; rules: GameRules; stake?: number }) => void;
   startLocal: (opts: { names: [string, string]; rules: GameRules }) => void;
   startOnlineGame: (state: LudoState, seat: Seat) => void;
 
@@ -111,8 +119,8 @@ interface GameStore {
 
   playAgain: () => void;
   leaveMatch: () => void;
+  setArena: (arena: ArenaMode) => void;
   toggleChat: () => void;
-  toggleVoiceMute: () => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => {
@@ -160,6 +168,14 @@ export const useGameStore = create<GameStore>((set, get) => {
 
   const finishMatch = (info: GameOverInfo) => {
     stopTimer();
+    // Staked tables settle here: the winning player's owner rakes the pot.
+    // Only single-player runs a real (practice-chip) economy today — online
+    // stakes settle server-side once ChipsBank escrow lands (docs/CHIPS.md).
+    const { session, ludo } = get();
+    if (session && session.mode === 'single' && session.stake > 0) {
+      const humanWon = ludo.players.some((p) => p.ownerId === info.winnerId && p.kind === 'human');
+      if (humanWon) useChipsStore.getState().credit(session.pot);
+    }
     set({ gameOver: info, isRolling: false, forcedDiceValues: null });
   };
 
@@ -274,12 +290,13 @@ export const useGameStore = create<GameStore>((set, get) => {
     reactions: [],
     elapsedSeconds: 0,
     gameOver: null,
-    showChat: true,
-    voiceMuted: false,
+    // Chat starts open where there's room for it; on phones it floats over
+    // the board, so it starts closed and lives behind the chat button.
+    showChat: typeof window === 'undefined' || window.matchMedia('(min-width: 768px)').matches,
 
     // ── Match setup ─────────────────────────────────────────────
 
-    startSinglePlayer: ({ bots, difficulty, rules }) => {
+    startSinglePlayer: ({ bots, difficulty, rules, stake = 0 }) => {
       const { identity } = useAppStore.getState();
       const botCount = Math.min(3, Math.max(1, bots));
       // One-on-one is played with two houses per player; bigger tables get one each
@@ -302,12 +319,25 @@ export const useGameStore = create<GameStore>((set, get) => {
                   }
             );
       const setup = () => {
-        beginMatch({ mode: 'single', rules, difficulty, mySeatIndex: 0 }, createInitialLudoState(defs, rules));
+        // Buy-in happens inside setup so "Play again" antes up again.
+        const wantedStake = Math.max(0, Math.floor(stake));
+        const paidStake = wantedStake > 0 && useChipsStore.getState().debit(wantedStake) ? wantedStake : 0;
+        const owners = new Set(defs.map((d) => d.ownerId ?? d.id)).size;
+        const pot = paidStake * owners;
+        beginMatch(
+          { mode: 'single', rules, difficulty, mySeatIndex: 0, arena: 'table', stake: paidStake, pot },
+          createInitialLudoState(defs, rules)
+        );
         systemMessage(
           botCount === 1
             ? `Head-to-head vs ${BOT_ROSTER[0].username} (${difficulty}) — two houses each.`
             : `Match started against ${botCount} ${difficulty} bots.`
         );
+        if (paidStake > 0) {
+          systemMessage(`You bought in for ${paidStake} chips — the house matched every seat. ${pot} chips ride on this table.`);
+        } else if (wantedStake > 0) {
+          systemMessage('Bankroll too small for that buy-in — playing a friendly table instead.');
+        }
       };
       lastOfflineSetup = setup;
       setup();
@@ -321,7 +351,10 @@ export const useGameStore = create<GameStore>((set, get) => {
         rules.sameLinePairs
       );
       const setup = () => {
-        beginMatch({ mode: 'local', rules, difficulty: 'medium', mySeatIndex: -1 }, createInitialLudoState(defs, rules));
+        beginMatch(
+          { mode: 'local', rules, difficulty: 'medium', mySeatIndex: -1, arena: 'table', stake: 0, pot: 0 },
+          createInitialLudoState(defs, rules)
+        );
         systemMessage('Local match started — pass the device between turns.');
       };
       lastOfflineSetup = setup;
@@ -338,7 +371,10 @@ export const useGameStore = create<GameStore>((set, get) => {
           kind: p.ownerId === `seat-${seat}` ? ('human' as const) : ('remote' as const),
         })),
       };
-      beginMatch({ mode: 'online', rules: state.rules, difficulty: 'medium', mySeatIndex: seat }, localized);
+      beginMatch(
+        { mode: 'online', rules: state.rules, difficulty: 'medium', mySeatIndex: seat, arena: 'table', stake: 0, pot: 0 },
+        localized
+      );
       systemMessage('Both players connected. Good luck!');
     },
 
@@ -428,7 +464,15 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (!move) return;
 
       if (move.usesAllDice) systemMessage(`${current.username} boosted a token ${move.dieValueUsed} steps.`);
-      if (move.capture) systemMessage(`${current.username} captured a token.`);
+      if (move.capture) {
+        systemMessage(`${current.username} captured a token.`);
+        // Staked tables pay a capture bounty from the house — instant gratification
+        if (session.mode === 'single' && session.stake > 0) {
+          const bounty = Math.max(5, Math.round(session.stake * 0.1));
+          useChipsStore.getState().credit(bounty);
+          systemMessage(`Capture bounty: +${bounty} chips.`);
+        }
+      }
       if (move.newLocation.kind === 'finished') systemMessage(`${current.username} brought a token home.`);
 
       let next = applyMove(ludo, move);
@@ -538,8 +582,10 @@ export const useGameStore = create<GameStore>((set, get) => {
       useAppStore.getState().navigate('menu');
     },
 
+    setArena: (arena) =>
+      set((s) => (s.session ? { session: { ...s.session, arena } } : {})),
+
     toggleChat: () => set((s) => ({ showChat: !s.showChat })),
-    toggleVoiceMute: () => set((s) => ({ voiceMuted: !s.voiceMuted })),
   };
 });
 
