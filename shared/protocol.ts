@@ -20,12 +20,16 @@ export interface RoomPlayerInfo {
   avatarId: string;
   ready: boolean;
   connected: boolean;
+  /** Verified hub wallet address, or null until `authenticate` succeeds. */
+  wallet: string | null;
 }
 
 export interface RoomSnapshot {
   code: string;
   status: RoomStatus;
   rules: GameRules;
+  /** USDC ante per seat for a real-money table; 0 = Friendly. */
+  stake: number;
   /** Indexed by seat; null seat = empty. */
   players: (RoomPlayerInfo | null)[];
   createdAt: number;
@@ -63,10 +67,12 @@ export type ClientMessage =
   | { t: 'join_room'; code: string; name: string; avatarId: string }
   | { t: 'rejoin'; code: string; playerToken: string }
   | { t: 'set_rules'; rules: GameRules }
+  | { t: 'set_stake'; stake: number }
+  | { t: 'authenticate'; address: string; message: string; signature: string }
   | { t: 'set_ready'; ready: boolean }
   | { t: 'start_game' }
   | { t: 'roll' }
-  | { t: 'move'; tokenId: string }
+  | { t: 'move'; tokenId: string; dieValue?: number }
   | { t: 'chat'; text: string }
   | { t: 'reaction'; icon: string }
   | { t: 'voice_signal'; signal: VoiceSignal }
@@ -77,6 +83,8 @@ export type ClientMessage =
 export type ServerMessage =
   | { t: 'joined'; seat: Seat; playerToken: string; room: RoomSnapshot }
   | { t: 'room_update'; room: RoomSnapshot }
+  | { t: 'authenticated'; address: string }
+  | { t: 'balance_update'; seat: Seat; balance: number }
   | { t: 'game_started'; state: LudoState }
   | { t: 'roll_result'; seat: Seat; values: number[] }
   | { t: 'game_state'; state: LudoState }
@@ -97,7 +105,11 @@ export type ErrorCode =
   | 'not_your_turn'
   | 'invalid_move'
   | 'invalid_message'
-  | 'already_in_room';
+  | 'already_in_room'
+  | 'stake_unavailable'
+  | 'wallet_required'
+  | 'insufficient_balance'
+  | 'settlement_failed';
 
 /** Milliseconds an un-started room lives before being reclaimed. */
 export const ROOM_TTL_MS = 30 * 60 * 1000;
