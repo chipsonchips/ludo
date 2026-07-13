@@ -9,6 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@chipsonchips/shared": "^0.1.1",
+    "dotenv": "^16.4.5",
+    "viem": "2.54.6",
     "ws": "^8.18.0"
   },
   "devDependencies": {
