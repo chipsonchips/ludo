@@ -3,7 +3,9 @@
  * between the game HUD bars. This is the default way to play; the 3D lounge
  * (GameScene) is reserved for tournament tables.
  */
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { getLegalMoves } from '@shared/ludo/gameLogic';
 import { useGameStore } from '@/stores/gameStore';
 import type { LudoColor, LudoPlayer, LudoState } from '@/ludo/types';
 import { getColorHex } from '@/ludo/boardLayout';
@@ -73,6 +75,18 @@ export function BoardScene2D() {
   const selectedTokenId = useGameStore((s) => s.selectedTokenId);
   const selectToken = useGameStore((s) => s.selectToken);
   const pot = useGameStore((s) => s.session?.pot ?? 0);
+  const boostMode = useGameStore((s) => s.boostMode);
+  const armedDie = useGameStore((s) => s.armedDie);
+
+  // With 2+ dice still live and not boosting, nothing is tappable until a
+  // die is armed — then only tokens that die can legally move.
+  const activeSelectableTokenIds = useMemo(() => {
+    if (ludo.phase !== 'select_token' || boostMode || ludo.diceValues.length < 2) {
+      return ludo.selectableTokenIds;
+    }
+    if (armedDie === null) return [];
+    return Array.from(new Set(getLegalMoves(ludo).filter((m) => m.dieValueUsed === armedDie).map((m) => m.tokenId)));
+  }, [ludo, boostMode, armedDie]);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center overflow-hidden px-2 pb-24 pt-14 md:pb-28 md:pt-16">
@@ -86,7 +100,13 @@ export function BoardScene2D() {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
-        <Board2D ludo={ludo} pot={pot} selectedTokenId={selectedTokenId} onSelectToken={selectToken} />
+        <Board2D
+          ludo={ludo}
+          pot={pot}
+          selectedTokenId={selectedTokenId}
+          onSelectToken={selectToken}
+          selectableTokenIds={activeSelectableTokenIds}
+        />
         <Plaques ludo={ludo} />
         <Dice2D />
       </motion.div>

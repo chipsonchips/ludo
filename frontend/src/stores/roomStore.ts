@@ -7,6 +7,7 @@ import type { GameRules } from '@shared/ludo/rules';
 import type { RoomSnapshot, Seat, ServerMessage } from '@shared/protocol';
 import { connection } from '@/net/client';
 import type { ConnectionStatus } from '@/net/connection';
+import { queryClient } from '@/lib/wagmiProvider';
 import { useAppStore } from './appStore';
 import { useGameStore } from './gameStore';
 import { useVoiceStore } from './voiceStore';
@@ -44,7 +45,7 @@ interface RoomStore {
   room: RoomSnapshot | null;
   seat: Seat | null;
   /** Which async lobby action is in flight (drives button spinners). */
-  pending: 'create' | 'join' | 'start' | null;
+  pending: 'create' | 'join' | 'start' | 'authenticate' | null;
   lastError: string | null;
   opponentDisconnected: { seat: Seat; graceSeconds: number } | null;
   roomClosedReason: string | null;
@@ -52,11 +53,13 @@ interface RoomStore {
   createRoom: () => Promise<void>;
   joinRoom: (code: string) => Promise<void>;
   setRules: (rules: GameRules) => void;
+  setStake: (stake: number) => void;
+  sendAuthenticate: (address: string, message: string, signature: string) => void;
   toggleReady: () => void;
   startGame: () => void;
   leaveRoom: () => void;
   sendRoll: () => void;
-  sendMove: (tokenId: string) => void;
+  sendMove: (tokenId: string, dieValue?: number) => void;
   sendChat: (text: string) => void;
   sendReaction: (icon: string) => void;
   clearError: () => void;
@@ -100,6 +103,18 @@ export const useRoomStore = create<RoomStore>((set, get) => {
         app.navigate('game');
         break;
       }
+
+      case 'authenticated':
+        set({ pending: null });
+        break;
+
+      case 'balance_update':
+        // The server already settled on-chain; nudge the banked-balance
+        // display to refetch now instead of waiting on its 30s poll. Any
+        // player's balance_update is a fine trigger — each client's own
+        // useBankedChips reads its own connected address regardless.
+        void queryClient.invalidateQueries({ queryKey: ['readContract'] });
+        break;
 
       case 'roll_result':
         game.onServerRoll(msg.seat, msg.values);
@@ -208,6 +223,15 @@ export const useRoomStore = create<RoomStore>((set, get) => {
       connection.send({ t: 'set_rules', rules });
     },
 
+    setStake: (stake) => {
+      connection.send({ t: 'set_stake', stake });
+    },
+
+    sendAuthenticate: (address, message, signature) => {
+      set({ pending: 'authenticate', lastError: null });
+      connection.send({ t: 'authenticate', address, message, signature });
+    },
+
     toggleReady: () => {
       const { room, seat } = get();
       const me = seat !== null ? room?.players[seat] : null;
@@ -233,7 +257,9 @@ export const useRoomStore = create<RoomStore>((set, get) => {
     },
 
     sendRoll: () => connection.send({ t: 'roll' }) && undefined,
-    sendMove: (tokenId) => connection.send({ t: 'move', tokenId }) && undefined,
+    sendMove: (tokenId, dieValue) =>
+      connection.send(dieValue !== undefined ? { t: 'move', tokenId, dieValue } : { t: 'move', tokenId }) &&
+      undefined,
     sendChat: (text) => connection.send({ t: 'chat', text }) && undefined,
     sendReaction: (icon) => connection.send({ t: 'reaction', icon }) && undefined,
 

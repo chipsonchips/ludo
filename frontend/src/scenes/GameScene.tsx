@@ -1,4 +1,4 @@
-import { Suspense, useState, useCallback, useEffect, useRef } from 'react';
+import { Suspense, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import { OrbitControls } from '@react-three/drei';
@@ -10,6 +10,7 @@ import { useGameStore } from '@/stores/gameStore';
 import { useSound } from '@/hooks/useSound';
 import { BOARD_CENTER } from '@/ludo/constants';
 import { diceCount } from '@shared/ludo/rules';
+import { getLegalMoves } from '@shared/ludo/gameLogic';
 import { LoungeEnvironment } from './LoungeEnvironment';
 
 interface DiceLaunch {
@@ -137,8 +138,20 @@ export function GameScene() {
   const completeRoll = useGameStore((s) => s.completeRoll);
   const selectToken = useGameStore((s) => s.selectToken);
   const selectedTokenId = useGameStore((s) => s.selectedTokenId);
+  const boostMode = useGameStore((s) => s.boostMode);
+  const armedDie = useGameStore((s) => s.armedDie);
   const [particles, setParticles] = useState(false);
   const { play } = useSound();
+
+  // With 2+ dice still live and not boosting, nothing is tappable until a
+  // die is armed — then only tokens that die can legally move.
+  const activeSelectableTokenIds = useMemo(() => {
+    if (ludo.phase !== 'select_token' || boostMode || ludo.diceValues.length < 2) {
+      return ludo.selectableTokenIds;
+    }
+    if (armedDie === null) return [];
+    return Array.from(new Set(getLegalMoves(ludo).filter((m) => m.dieValueUsed === armedDie).map((m) => m.tokenId)));
+  }, [ludo, boostMode, armedDie]);
 
   const handleRollComplete = useCallback(
     (values: number[]) => {
@@ -182,6 +195,7 @@ export function GameScene() {
             ludo={ludo}
             selectedTokenId={selectedTokenId}
             onSelectToken={selectToken}
+            selectableTokenIds={activeSelectableTokenIds}
           />
 
           <Physics gravity={[0, -35, 0]}>

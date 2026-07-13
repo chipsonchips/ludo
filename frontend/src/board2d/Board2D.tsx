@@ -230,9 +230,12 @@ interface Board2DProps {
   pot: number;
   selectedTokenId: string | null;
   onSelectToken: (tokenId: string) => void;
+  /** Overrides ludo.selectableTokenIds (e.g. narrowed to the currently-armed die). Defaults to it. */
+  selectableTokenIds?: string[];
 }
 
-export function Board2D({ ludo, pot, selectedTokenId, onSelectToken }: Board2DProps) {
+export function Board2D({ ludo, pot, selectedTokenId, onSelectToken, selectableTokenIds }: Board2DProps) {
+  const activeSelectable = selectableTokenIds ?? ludo.selectableTokenIds;
   // Pods and the hub draw the base/center areas; only track-ish cells tile out
   const tiles = useMemo(() => buildBoardCells().filter((c) => !BASE_CODES.has(c.code)), []);
 
@@ -309,7 +312,7 @@ export function Board2D({ ludo, pot, selectedTokenId, onSelectToken }: Board2DPr
               y={y}
               stackIndex={stack.indexOf(token.id)}
               stackSize={stack.length}
-              isSelectable={ludo.selectableTokenIds.includes(token.id)}
+              isSelectable={activeSelectable.includes(token.id)}
               isSelected={selectedTokenId === token.id}
               onSelect={() => onSelectToken(token.id)}
             />

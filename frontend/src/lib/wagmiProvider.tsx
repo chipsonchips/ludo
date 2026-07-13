@@ -4,7 +4,7 @@ import { WagmiProvider, createConfig, http } from 'wagmi';
 import { base, celo } from 'wagmi/chains';
 import { chipsHubConnector } from '@chipsonchips/shared/wallet-bridge';
 
-const queryClient = new QueryClient();
+export const queryClient = new QueryClient();
 
 const hubOrigins = (import.meta.env.VITE_HUB_ORIGINS as string | undefined)
   ?.split(',')

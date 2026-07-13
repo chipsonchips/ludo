@@ -5,6 +5,7 @@ import { buildInviteLink, useAppStore } from "@/stores/appStore";
 import { useRoomStore } from "@/stores/roomStore";
 import { ScreenShell } from "./ScreenShell";
 import { RulesEditor } from "@/components/lobby/RulesEditor";
+import { OnlineStakePicker } from "@/components/chips/OnlineStakePicker";
 import { Button, FieldLabel } from "@/components/ui";
 import {
   AvatarBadge,
@@ -110,6 +111,7 @@ export function LobbyScreen() {
     lastError,
     clearError,
     setRules,
+    setStake,
     toggleReady,
     startGame,
     leaveRoom,
@@ -134,6 +136,7 @@ export function LobbyScreen() {
   const isHost = seat === 0;
   const bothPresent = room.players.every((p) => p !== null);
   const everyoneReady = room.players.every((p) => p?.ready && p.connected);
+  const myWalletMissing = room.stake > 0 && !me?.wallet;
 
   const copy = async (payload: string, which: "code" | "link") => {
     try {
@@ -251,6 +254,11 @@ export function LobbyScreen() {
         )}
       </div>
 
+      {/* Stakes */}
+      <div className="glass-panel mb-4 p-5">
+        <OnlineStakePicker value={room.stake} onChange={isHost ? setStake : undefined} />
+      </div>
+
       {/* Rules */}
       <div className="glass-panel mb-4 p-5">
         <RulesEditor
@@ -271,7 +279,8 @@ export function LobbyScreen() {
         <Button
           variant={me?.ready ? "ghost" : "primary"}
           icon={me?.ready ? <IconX size={14} /> : <IconCheck size={14} />}
-          disabled={!bothPresent}
+          disabled={!bothPresent || myWalletMissing}
+          title={myWalletMissing ? "Verify your hub wallet above to ready up on a staked table" : undefined}
           onClick={toggleReady}
         >
           {me?.ready ? "Not ready" : "Ready up"}

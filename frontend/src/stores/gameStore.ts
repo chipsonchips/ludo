@@ -93,6 +93,12 @@ interface GameStore {
   selectedTokenId: string | null;
   /** Offline modes: the next token pick spends BOTH dice on one move. */
   boostMode: boolean;
+  /**
+   * With 2+ dice still unspent, a die must be armed before any token is
+   * tappable — the armed value is what the next move spends. Irrelevant
+   * (and unused) once only one die remains.
+   */
+  armedDie: number | null;
   chat: ChatEntry[];
   reactions: ReactionEntry[];
   elapsedSeconds: number;
@@ -107,6 +113,7 @@ interface GameStore {
   completeRoll: (values: number[]) => void;
   selectToken: (tokenId: string) => void;
   toggleBoost: () => void;
+  armDie: (value: number) => void;
 
   applyServerState: (state: LudoState) => void;
   onServerRoll: (seat: Seat, values: number[]) => void;
@@ -158,6 +165,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       forcedDiceValues: null,
       selectedTokenId: null,
       boostMode: false,
+      armedDie: null,
       chat: [],
       reactions: [],
       gameOver: null,
@@ -206,8 +214,8 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     const bot = ludo.players[ludo.currentPlayerIndex];
     const move = chooseAiMove(ludo, moves, session.difficulty);
-    if (move.capture) systemMessage(`${bot.username} captured a token.`);
-    if (move.newLocation.kind === 'finished') systemMessage(`${bot.username} brought a token home.`);
+    if (move.capture) systemMessage(`${bot.username} captured a token — retired undefeated!`);
+    else if (move.newLocation.kind === 'finished') systemMessage(`${bot.username} brought a token home.`);
 
     const next = applyMove(ludo, move);
     set({ ludo: next, selectedTokenId: move.tokenId });
@@ -270,6 +278,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       isRolling: false,
       lastDiceValues: values,
       boostMode: false,
+      armedDie: null,
       ludo: {
         ...withDice,
         selectableTokenIds: Array.from(new Set(moves.map((m) => m.tokenId))),
@@ -286,6 +295,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     forcedDiceValues: null,
     selectedTokenId: null,
     boostMode: false,
+    armedDie: null,
     chat: [],
     reactions: [],
     elapsedSeconds: 0,
@@ -390,7 +400,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         useRoomStore.getState().sendRoll();
         return; // isRolling flips when the server's roll_result arrives
       }
-      set({ isRolling: true, selectedTokenId: null, boostMode: false });
+      set({ isRolling: true, selectedTokenId: null, boostMode: false, armedDie: null });
     },
 
     toggleBoost: () => {
@@ -419,12 +429,27 @@ export const useGameStore = create<GameStore>((set, get) => {
       const total = ludo.diceValues.reduce((a, b) => a + b, 0);
       set({
         boostMode: true,
+        armedDie: null,
         ludo: {
           ...ludo,
           selectableTokenIds: Array.from(new Set(boostMoves.map((m) => m.tokenId))),
           message: `Boost — one token charges ${total} steps!`,
         },
       });
+    },
+
+    armDie: (value) => {
+      const { ludo, session, gameOver, armedDie } = get();
+      if (!session || gameOver) return;
+      if (ludo.phase !== 'select_token' || ludo.diceValues.length < 2) return;
+      const current = ludo.players[ludo.currentPlayerIndex];
+      if (session.mode === 'online') {
+        if (current.ownerId !== `seat-${session.mySeatIndex}`) return;
+      } else if (current.kind !== 'human') {
+        return;
+      }
+      if (!getLegalMoves(ludo).some((m) => m.dieValueUsed === value)) return; // nothing legal for this die
+      set({ armedDie: armedDie === value ? null : value, boostMode: false });
     },
 
     completeRoll: (values) => {
@@ -445,35 +470,44 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     selectToken: (tokenId) => {
-      const { ludo, session, gameOver } = get();
+      const { ludo, session, gameOver, boostMode, armedDie } = get();
       if (!session || gameOver || ludo.phase !== 'select_token') return;
+
+      // With 2+ dice still live and not boosting, a die must be armed first.
+      const needsArming = ludo.diceValues.length >= 2 && !boostMode;
+      if (needsArming && armedDie === null) return;
+      const dieFilter = needsArming ? armedDie : null;
 
       if (session.mode === 'online') {
         const current = ludo.players[ludo.currentPlayerIndex];
         if (current.ownerId !== `seat-${session.mySeatIndex}`) return;
         if (!ludo.selectableTokenIds.includes(tokenId)) return;
-        useRoomStore.getState().sendMove(tokenId);
+        useRoomStore.getState().sendMove(tokenId, dieFilter ?? undefined);
+        set({ armedDie: null });
         return;
       }
 
       const current = ludo.players[ludo.currentPlayerIndex];
       if (current.kind !== 'human') return;
 
-      const moves = get().boostMode ? getBoostMoves(ludo) : getLegalMoves(ludo);
+      const candidateMoves = boostMode ? getBoostMoves(ludo) : getLegalMoves(ludo);
+      const moves = dieFilter !== null ? candidateMoves.filter((m) => m.dieValueUsed === dieFilter) : candidateMoves;
       const move = moves.find((m) => m.tokenId === tokenId);
       if (!move) return;
 
       if (move.usesAllDice) systemMessage(`${current.username} boosted a token ${move.dieValueUsed} steps.`);
+      const retires = move.capture || move.newLocation.kind === 'finished';
       if (move.capture) {
-        systemMessage(`${current.username} captured a token.`);
-        // Staked tables pay a capture bounty from the house — instant gratification
-        if (session.mode === 'single' && session.stake > 0) {
-          const bounty = Math.max(5, Math.round(session.stake * 0.1));
-          useChipsStore.getState().credit(bounty);
-          systemMessage(`Capture bounty: +${bounty} chips.`);
-        }
+        systemMessage(`${current.username} captured a token — retired undefeated!`);
+      } else if (move.newLocation.kind === 'finished') {
+        systemMessage(`${current.username} brought a token home.`);
       }
-      if (move.newLocation.kind === 'finished') systemMessage(`${current.username} brought a token home.`);
+      // Staked tables pay a retirement bounty from the house — instant gratification
+      if (retires && session.mode === 'single' && session.stake > 0) {
+        const bounty = Math.max(5, Math.round(session.stake * 0.25));
+        useChipsStore.getState().credit(bounty);
+        systemMessage(`Retirement bounty: +${bounty} chips.`);
+      }
 
       let next = applyMove(ludo, move);
       if (next.phase === 'select_token') {
@@ -482,7 +516,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         else next = { ...next, selectableTokenIds: Array.from(new Set(remaining.map((m) => m.tokenId))) };
       }
 
-      set({ ludo: next, selectedTokenId: tokenId, boostMode: false });
+      set({ ludo: next, selectedTokenId: tokenId, boostMode: false, armedDie: null });
       setTimeout(() => set({ selectedTokenId: null }), 600);
 
       if (next.winnerId) {
