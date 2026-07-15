@@ -11,13 +11,13 @@
   "dependencies": {
     "@chipsonchips/shared": "^0.1.1",
     "dotenv": "^16.4.5",
+    "tsx": "^4.19.0",
     "viem": "2.54.6",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/ws": "^8.5.13",
-    "tsx": "^4.19.0",
     "typescript": "~5.6.2"
   }
 }

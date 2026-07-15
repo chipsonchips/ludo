@@ -14,16 +14,30 @@ export interface BankConfig {
   operatorPrivateKey: `0x${string}`;
 }
 
+/** 0x-prefixed 32-byte hex string — anything else crashes viem's privateKeyToAccount. */
+function isValidPrivateKey(value: string): value is `0x${string}` {
+  return /^0x[0-9a-fA-F]{64}$/.test(value);
+}
+
 function loadBankConfig(): BankConfig | null {
-  const chipsBankAddress = process.env.CHIPSBANK_ADDRESS;
-  const operatorPrivateKey = process.env.LUDO_OPERATOR_KEY;
+  const chipsBankAddress = process.env.CHIPSBANK_ADDRESS?.trim();
+  const operatorPrivateKey = process.env.LUDO_OPERATOR_KEY?.trim();
   if (!chipsBankAddress || !operatorPrivateKey) return null;
+
+  if (!isValidPrivateKey(operatorPrivateKey)) {
+    console.error(
+      "LUDO_OPERATOR_KEY is set but is not a valid 0x-prefixed 32-byte private key " +
+        "(check for stray whitespace or a truncated paste) — ChipsBank settlement " +
+        "stays disabled, only stake 0 (Friendly) tables will work."
+    );
+    return null;
+  }
 
   return {
     chain: (process.env.CHAIN || "celo") as "base" | "celo",
     rpcUrl: process.env.RPC_URL || "",
     chipsBankAddress: chipsBankAddress as `0x${string}`,
-    operatorPrivateKey: operatorPrivateKey as `0x${string}`,
+    operatorPrivateKey,
   };
 }
 
