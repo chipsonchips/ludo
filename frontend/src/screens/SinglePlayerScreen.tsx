@@ -5,6 +5,7 @@ import { useAppStore } from '@/stores/appStore';
 import { useGameStore } from '@/stores/gameStore';
 import { ScreenShell } from './ScreenShell';
 import { RulesEditor } from '@/components/lobby/RulesEditor';
+import { StakePicker } from '@/components/chips/StakePicker';
 import { Button, FieldLabel, SegmentedControl } from '@/components/ui';
 import { IconBot, IconPlay } from '@/components/icons';
 
@@ -20,6 +21,10 @@ export function SinglePlayerScreen() {
   const [difficulty, setDifficulty] = useState<AiDifficulty>('medium');
   const [bots, setBots] = useState<'1' | '2' | '3'>('3');
   const [rules, setRules] = useState<GameRules>({ ...DEFAULT_RULES });
+  const [stake, setStake] = useState(0);
+
+  // Head-to-head seats two owners; bigger tables seat you + each bot
+  const seats = bots === '1' ? 2 : Number(bots) + 1;
 
   return (
     <ScreenShell onBack={() => navigate('menu')}>
@@ -63,15 +68,17 @@ export function SinglePlayerScreen() {
           />
         </div>
 
+        <StakePicker value={stake} onChange={setStake} seats={seats} />
+
         <RulesEditor rules={rules} onChange={setRules} />
 
         <Button
           variant="primary"
           icon={<IconPlay size={16} />}
           className="self-center px-10 py-3"
-          onClick={() => startSinglePlayer({ bots: Number(bots), difficulty, rules })}
+          onClick={() => startSinglePlayer({ bots: Number(bots), difficulty, rules, stake })}
         >
-          Start Match
+          {stake > 0 ? `Buy in · ${stake} chips` : 'Start Match'}
         </Button>
       </div>
     </ScreenShell>

@@ -18,6 +18,8 @@ interface LudoBoardProps {
   ludo: LudoState;
   selectedTokenId: string | null;
   onSelectToken: (tokenId: string) => void;
+  /** Overrides ludo.selectableTokenIds (e.g. narrowed to the currently-armed die). Defaults to it. */
+  selectableTokenIds?: string[];
 }
 
 /** Vivid base-area colors matching a classic physical Ludo board */
@@ -255,8 +257,9 @@ function CenterHub() {
 
 const CENTER_CODES = new Set(['CY', 'CB', 'CG', 'CR', 'CC']);
 
-export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardProps) {
+export function LudoBoard({ ludo, selectedTokenId, onSelectToken, selectableTokenIds }: LudoBoardProps) {
   const cells = useMemo(() => buildBoardCells().filter((c) => !CENTER_CODES.has(c.code)), []);
+  const activeSelectable = selectableTokenIds ?? ludo.selectableTokenIds;
 
   return (
     <group>
@@ -287,7 +290,7 @@ export function LudoBoard({ ludo, selectedTokenId, onSelectToken }: LudoBoardPro
       {ludo.tokens.map((token) => {
         if (token.location.kind === 'finished') return null;
         const pos = getTokenWorldPosition(token.location, token.color, ludo.rules);
-        const isSelectable = ludo.selectableTokenIds.includes(token.id);
+        const isSelectable = activeSelectable.includes(token.id);
         return (
           <LudoTokenMesh
             key={token.id}

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { GameScene } from '@/scenes/GameScene';
+import { BoardScene2D } from '@/board2d/BoardScene2D';
 import { useGameStore } from '@/stores/gameStore';
 import { useRoomStore } from '@/stores/roomStore';
 import { TopBar } from './TopBar';
@@ -46,9 +47,13 @@ function OpponentDisconnectedBanner() {
 }
 
 export function GameScreen() {
+  // Normal play happens on the flat casino table; the 3D lounge is the
+  // tournament arena (also reachable via the in-game view toggle).
+  const arena = useGameStore((s) => s.session?.arena ?? 'table');
+
   return (
     <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(ellipse_at_center,#1a1410_0%,#0a0a12_70%)]">
-      <GameScene />
+      {arena === 'lounge' ? <GameScene /> : <BoardScene2D />}
 
       <div className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(0,0,0,0.3)_100%)]" />
 
@@ -63,9 +68,11 @@ export function GameScreen() {
       <TutorialCoach />
       <WinnerOverlay />
 
-      <div className="pointer-events-none absolute bottom-28 left-1/2 z-[2] -translate-x-1/2 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[10px] uppercase tracking-widest text-white/40 backdrop-blur-sm md:bottom-32">
-        Drag to rotate · Scroll to zoom
-      </div>
+      {arena === 'lounge' && (
+        <div className="pointer-events-none absolute bottom-28 left-1/2 z-[2] -translate-x-1/2 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[10px] uppercase tracking-widest text-white/40 backdrop-blur-sm md:bottom-32">
+          Drag to rotate · Scroll to zoom
+        </div>
+      )}
     </div>
   );
 }

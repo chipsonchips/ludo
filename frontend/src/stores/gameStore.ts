@@ -23,8 +23,12 @@ import type { AiDifficulty, LudoPlayerDef, LudoState } from '@shared/ludo/types'
 import type { GameOverReason, Seat } from '@shared/protocol';
 import { useRoomStore } from './roomStore';
 import { useAppStore } from './appStore';
+import { useChipsStore } from './chipsStore';
 
 export type GameMode = 'single' | 'local' | 'online';
+
+/** Which arena hosts the match: the flat casino table (normal play) or the 3D lounge (tournament tables). */
+export type ArenaMode = 'table' | 'lounge';
 
 export interface MatchSession {
   mode: GameMode;
@@ -32,6 +36,11 @@ export interface MatchSession {
   difficulty: AiDifficulty;
   /** Index into ludo.players that this device's primary player holds (-1 = every seat is local). */
   mySeatIndex: number;
+  arena: ArenaMode;
+  /** Chips each player bought in with (0 = friendly table). */
+  stake: number;
+  /** Total chips riding on the table — stake × players, winner takes it. */
+  pot: number;
 }
 
 export interface ChatEntry {
@@ -84,14 +93,19 @@ interface GameStore {
   selectedTokenId: string | null;
   /** Offline modes: the next token pick spends BOTH dice on one move. */
   boostMode: boolean;
+  /**
+   * With 2+ dice still unspent, a die must be armed before any token is
+   * tappable — the armed value is what the next move spends. Irrelevant
+   * (and unused) once only one die remains.
+   */
+  armedDie: number | null;
   chat: ChatEntry[];
   reactions: ReactionEntry[];
   elapsedSeconds: number;
   gameOver: GameOverInfo | null;
   showChat: boolean;
-  voiceMuted: boolean;
 
-  startSinglePlayer: (opts: { bots: number; difficulty: AiDifficulty; rules: GameRules }) => void;
+  startSinglePlayer: (opts: { bots: number; difficulty: AiDifficulty; rules: GameRules; stake?: number }) => void;
   startLocal: (opts: { names: [string, string]; rules: GameRules }) => void;
   startOnlineGame: (state: LudoState, seat: Seat) => void;
 
@@ -99,6 +113,7 @@ interface GameStore {
   completeRoll: (values: number[]) => void;
   selectToken: (tokenId: string) => void;
   toggleBoost: () => void;
+  armDie: (value: number) => void;
 
   applyServerState: (state: LudoState) => void;
   onServerRoll: (seat: Seat, values: number[]) => void;
@@ -111,8 +126,8 @@ interface GameStore {
 
   playAgain: () => void;
   leaveMatch: () => void;
+  setArena: (arena: ArenaMode) => void;
   toggleChat: () => void;
-  toggleVoiceMute: () => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => {
@@ -150,6 +165,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       forcedDiceValues: null,
       selectedTokenId: null,
       boostMode: false,
+      armedDie: null,
       chat: [],
       reactions: [],
       gameOver: null,
@@ -160,6 +176,14 @@ export const useGameStore = create<GameStore>((set, get) => {
 
   const finishMatch = (info: GameOverInfo) => {
     stopTimer();
+    // Staked tables settle here: the winning player's owner rakes the pot.
+    // Only single-player runs a real (practice-chip) economy today — online
+    // stakes settle server-side once ChipsBank escrow lands (docs/CHIPS.md).
+    const { session, ludo } = get();
+    if (session && session.mode === 'single' && session.stake > 0) {
+      const humanWon = ludo.players.some((p) => p.ownerId === info.winnerId && p.kind === 'human');
+      if (humanWon) useChipsStore.getState().credit(session.pot);
+    }
     set({ gameOver: info, isRolling: false, forcedDiceValues: null });
   };
 
@@ -190,8 +214,8 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     const bot = ludo.players[ludo.currentPlayerIndex];
     const move = chooseAiMove(ludo, moves, session.difficulty);
-    if (move.capture) systemMessage(`${bot.username} captured a token.`);
-    if (move.newLocation.kind === 'finished') systemMessage(`${bot.username} brought a token home.`);
+    if (move.capture) systemMessage(`${bot.username} captured a token — retired undefeated!`);
+    else if (move.newLocation.kind === 'finished') systemMessage(`${bot.username} brought a token home.`);
 
     const next = applyMove(ludo, move);
     set({ ludo: next, selectedTokenId: move.tokenId });
@@ -254,6 +278,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       isRolling: false,
       lastDiceValues: values,
       boostMode: false,
+      armedDie: null,
       ludo: {
         ...withDice,
         selectableTokenIds: Array.from(new Set(moves.map((m) => m.tokenId))),
@@ -270,16 +295,18 @@ export const useGameStore = create<GameStore>((set, get) => {
     forcedDiceValues: null,
     selectedTokenId: null,
     boostMode: false,
+    armedDie: null,
     chat: [],
     reactions: [],
     elapsedSeconds: 0,
     gameOver: null,
-    showChat: true,
-    voiceMuted: false,
+    // Chat starts open where there's room for it; on phones it floats over
+    // the board, so it starts closed and lives behind the chat button.
+    showChat: typeof window === 'undefined' || window.matchMedia('(min-width: 768px)').matches,
 
     // ── Match setup ─────────────────────────────────────────────
 
-    startSinglePlayer: ({ bots, difficulty, rules }) => {
+    startSinglePlayer: ({ bots, difficulty, rules, stake = 0 }) => {
       const { identity } = useAppStore.getState();
       const botCount = Math.min(3, Math.max(1, bots));
       // One-on-one is played with two houses per player; bigger tables get one each
@@ -302,12 +329,25 @@ export const useGameStore = create<GameStore>((set, get) => {
                   }
             );
       const setup = () => {
-        beginMatch({ mode: 'single', rules, difficulty, mySeatIndex: 0 }, createInitialLudoState(defs, rules));
+        // Buy-in happens inside setup so "Play again" antes up again.
+        const wantedStake = Math.max(0, Math.floor(stake));
+        const paidStake = wantedStake > 0 && useChipsStore.getState().debit(wantedStake) ? wantedStake : 0;
+        const owners = new Set(defs.map((d) => d.ownerId ?? d.id)).size;
+        const pot = paidStake * owners;
+        beginMatch(
+          { mode: 'single', rules, difficulty, mySeatIndex: 0, arena: 'table', stake: paidStake, pot },
+          createInitialLudoState(defs, rules)
+        );
         systemMessage(
           botCount === 1
             ? `Head-to-head vs ${BOT_ROSTER[0].username} (${difficulty}) — two houses each.`
             : `Match started against ${botCount} ${difficulty} bots.`
         );
+        if (paidStake > 0) {
+          systemMessage(`You bought in for ${paidStake} chips — the house matched every seat. ${pot} chips ride on this table.`);
+        } else if (wantedStake > 0) {
+          systemMessage('Bankroll too small for that buy-in — playing a friendly table instead.');
+        }
       };
       lastOfflineSetup = setup;
       setup();
@@ -321,7 +361,10 @@ export const useGameStore = create<GameStore>((set, get) => {
         rules.sameLinePairs
       );
       const setup = () => {
-        beginMatch({ mode: 'local', rules, difficulty: 'medium', mySeatIndex: -1 }, createInitialLudoState(defs, rules));
+        beginMatch(
+          { mode: 'local', rules, difficulty: 'medium', mySeatIndex: -1, arena: 'table', stake: 0, pot: 0 },
+          createInitialLudoState(defs, rules)
+        );
         systemMessage('Local match started — pass the device between turns.');
       };
       lastOfflineSetup = setup;
@@ -338,7 +381,10 @@ export const useGameStore = create<GameStore>((set, get) => {
           kind: p.ownerId === `seat-${seat}` ? ('human' as const) : ('remote' as const),
         })),
       };
-      beginMatch({ mode: 'online', rules: state.rules, difficulty: 'medium', mySeatIndex: seat }, localized);
+      beginMatch(
+        { mode: 'online', rules: state.rules, difficulty: 'medium', mySeatIndex: seat, arena: 'table', stake: 0, pot: 0 },
+        localized
+      );
       systemMessage('Both players connected. Good luck!');
     },
 
@@ -354,7 +400,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         useRoomStore.getState().sendRoll();
         return; // isRolling flips when the server's roll_result arrives
       }
-      set({ isRolling: true, selectedTokenId: null, boostMode: false });
+      set({ isRolling: true, selectedTokenId: null, boostMode: false, armedDie: null });
     },
 
     toggleBoost: () => {
@@ -383,12 +429,27 @@ export const useGameStore = create<GameStore>((set, get) => {
       const total = ludo.diceValues.reduce((a, b) => a + b, 0);
       set({
         boostMode: true,
+        armedDie: null,
         ludo: {
           ...ludo,
           selectableTokenIds: Array.from(new Set(boostMoves.map((m) => m.tokenId))),
           message: `Boost — one token charges ${total} steps!`,
         },
       });
+    },
+
+    armDie: (value) => {
+      const { ludo, session, gameOver, armedDie } = get();
+      if (!session || gameOver) return;
+      if (ludo.phase !== 'select_token' || ludo.diceValues.length < 2) return;
+      const current = ludo.players[ludo.currentPlayerIndex];
+      if (session.mode === 'online') {
+        if (current.ownerId !== `seat-${session.mySeatIndex}`) return;
+      } else if (current.kind !== 'human') {
+        return;
+      }
+      if (!getLegalMoves(ludo).some((m) => m.dieValueUsed === value)) return; // nothing legal for this die
+      set({ armedDie: armedDie === value ? null : value, boostMode: false });
     },
 
     completeRoll: (values) => {
@@ -409,27 +470,44 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     selectToken: (tokenId) => {
-      const { ludo, session, gameOver } = get();
+      const { ludo, session, gameOver, boostMode, armedDie } = get();
       if (!session || gameOver || ludo.phase !== 'select_token') return;
+
+      // With 2+ dice still live and not boosting, a die must be armed first.
+      const needsArming = ludo.diceValues.length >= 2 && !boostMode;
+      if (needsArming && armedDie === null) return;
+      const dieFilter = needsArming ? armedDie : null;
 
       if (session.mode === 'online') {
         const current = ludo.players[ludo.currentPlayerIndex];
         if (current.ownerId !== `seat-${session.mySeatIndex}`) return;
         if (!ludo.selectableTokenIds.includes(tokenId)) return;
-        useRoomStore.getState().sendMove(tokenId);
+        useRoomStore.getState().sendMove(tokenId, dieFilter ?? undefined);
+        set({ armedDie: null });
         return;
       }
 
       const current = ludo.players[ludo.currentPlayerIndex];
       if (current.kind !== 'human') return;
 
-      const moves = get().boostMode ? getBoostMoves(ludo) : getLegalMoves(ludo);
+      const candidateMoves = boostMode ? getBoostMoves(ludo) : getLegalMoves(ludo);
+      const moves = dieFilter !== null ? candidateMoves.filter((m) => m.dieValueUsed === dieFilter) : candidateMoves;
       const move = moves.find((m) => m.tokenId === tokenId);
       if (!move) return;
 
       if (move.usesAllDice) systemMessage(`${current.username} boosted a token ${move.dieValueUsed} steps.`);
-      if (move.capture) systemMessage(`${current.username} captured a token.`);
-      if (move.newLocation.kind === 'finished') systemMessage(`${current.username} brought a token home.`);
+      const retires = move.capture || move.newLocation.kind === 'finished';
+      if (move.capture) {
+        systemMessage(`${current.username} captured a token — retired undefeated!`);
+      } else if (move.newLocation.kind === 'finished') {
+        systemMessage(`${current.username} brought a token home.`);
+      }
+      // Staked tables pay a retirement bounty from the house — instant gratification
+      if (retires && session.mode === 'single' && session.stake > 0) {
+        const bounty = Math.max(5, Math.round(session.stake * 0.25));
+        useChipsStore.getState().credit(bounty);
+        systemMessage(`Retirement bounty: +${bounty} chips.`);
+      }
 
       let next = applyMove(ludo, move);
       if (next.phase === 'select_token') {
@@ -438,7 +516,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         else next = { ...next, selectableTokenIds: Array.from(new Set(remaining.map((m) => m.tokenId))) };
       }
 
-      set({ ludo: next, selectedTokenId: tokenId, boostMode: false });
+      set({ ludo: next, selectedTokenId: tokenId, boostMode: false, armedDie: null });
       setTimeout(() => set({ selectedTokenId: null }), 600);
 
       if (next.winnerId) {
@@ -538,8 +616,10 @@ export const useGameStore = create<GameStore>((set, get) => {
       useAppStore.getState().navigate('menu');
     },
 
+    setArena: (arena) =>
+      set((s) => (s.session ? { session: { ...s.session, arena } } : {})),
+
     toggleChat: () => set((s) => ({ showChat: !s.showChat })),
-    toggleVoiceMute: () => set((s) => ({ voiceMuted: !s.voiceMuted })),
   };
 });
 

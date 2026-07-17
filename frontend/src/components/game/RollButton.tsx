@@ -3,6 +3,7 @@ import { getBoostMoves } from '@shared/ludo/gameLogic';
 import { useGameStore } from '@/stores/gameStore';
 import { useSound } from '@/hooks/useSound';
 import { IconDice, IconDieFace, IconPlus } from '../icons';
+import { DiePicker } from './DiePicker';
 
 /**
  * Offline modes: merge both remaining dice into one supercharged move.
@@ -62,6 +63,7 @@ export function RollButton() {
   const ludo = useGameStore((s) => s.ludo);
   const lastDiceValues = useGameStore((s) => s.lastDiceValues);
   const boostMode = useGameStore((s) => s.boostMode);
+  const armedDie = useGameStore((s) => s.armedDie);
   const { play } = useSound();
 
   const current = ludo.players[ludo.currentPlayerIndex];
@@ -86,16 +88,19 @@ export function RollButton() {
           : ludo.phase === 'select_token'
             ? boostMode
               ? 'Boost — pick a token'
-              : 'Pick a token'
+              : ludo.diceValues.length >= 2 && armedDie === null
+                ? 'Pick a die'
+                : 'Pick a token'
             : isMyTurn
               ? `${current.username === 'You' ? 'Your' : `${current.username}'s`} turn`
               : 'Waiting…'}
       </div>
 
       <div className="relative">
+        <DiePicker />
         <BoostButton />
       <motion.button
-        className={`glass-panel relative flex h-14 w-48 items-center justify-center gap-3 overflow-hidden rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-game-gold/70 md:h-16 md:w-56 ${
+        className={`glass-panel relative flex h-12 w-36 items-center justify-center gap-2 overflow-hidden rounded-full border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-game-gold/70 sm:h-14 sm:w-48 sm:gap-3 md:h-16 md:w-56 ${
           disabled
             ? 'cursor-not-allowed opacity-50'
             : 'border-game-gold/50 shadow-[0_0_30px_rgba(245,158,11,0.2)] hover:border-game-gold hover:shadow-[0_0_40px_rgba(245,158,11,0.4)]'

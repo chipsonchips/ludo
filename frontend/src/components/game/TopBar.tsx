@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/stores/gameStore';
 import { useRoomStore } from '@/stores/roomStore';
-import { IconBot, IconLeave, IconTimer, IconUsers, IconWifi } from '../icons';
+import { formatChips } from '@/stores/chipsStore';
+import { ChipBalanceBadge } from '../chips/ChipBalanceBadge';
+import { IconBot, IconChip, IconDice, IconLeave, IconTimer, IconUsers, IconWifi } from '../icons';
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -15,7 +17,11 @@ export function TopBar() {
   const isRolling = useGameStore((s) => s.isRolling);
   const elapsedSeconds = useGameStore((s) => s.elapsedSeconds);
   const leaveMatch = useGameStore((s) => s.leaveMatch);
+  const setArena = useGameStore((s) => s.setArena);
   const roomCode = useRoomStore((s) => s.room?.code);
+
+  const arena = session?.arena ?? 'table';
+  const staked = (session?.stake ?? 0) > 0;
 
   const current = ludo.players[ludo.currentPlayerIndex];
   const myTurn = current?.kind === 'human';
@@ -52,13 +58,13 @@ export function TopBar() {
 
   return (
     <motion.header
-      className="pointer-events-auto z-10 flex items-center justify-between gap-2 px-4 py-3 md:gap-4 md:px-6 md:py-4"
+      className="pointer-events-auto z-10 flex items-center justify-between gap-2 px-2 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4 md:gap-4 md:px-6 md:pb-4 md:pt-4"
       initial={{ y: -60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
     >
       {/* Left: match context */}
-      <div className="glass-panel flex items-center gap-3 px-4 py-2 shadow-lg">
+      <div className="glass-panel flex min-w-0 items-center gap-2 px-3 py-2 shadow-lg md:gap-3 md:px-4">
         <div className="flex items-center gap-1.5 text-[11px] font-semibold text-game-gold">{modeBadge}</div>
         <div className="hidden h-6 w-px bg-white/10 md:block" />
         <div className="hidden items-center gap-2 font-display text-xs font-bold tracking-wider text-white/85 md:flex">
@@ -67,6 +73,21 @@ export function TopBar() {
           </span>
           {formatTime(elapsedSeconds)}
         </div>
+        {staked && (
+          <>
+            <div className="hidden h-6 w-px bg-white/10 md:block" />
+            <div
+              className="flex items-center gap-1.5 font-display text-xs font-bold tracking-wider text-game-gold"
+              title={`Pot: winner takes ${formatChips(session!.pot)} chips`}
+            >
+              <IconChip size={13} />
+              <span className="hidden md:inline">Pot</span> {formatChips(session!.pot)}
+            </div>
+            <div className="hidden md:block">
+              <ChipBalanceBadge compact />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Center: status */}
@@ -83,10 +104,21 @@ export function TopBar() {
         </div>
       </div>
 
-      {/* Right: leave */}
-      <div className="glass-panel flex items-center gap-2 px-3 py-1.5 shadow-lg">
+      {/* Right: arena view + leave */}
+      <div className="glass-panel flex flex-shrink-0 items-center gap-1 px-2 py-1.5 shadow-lg md:gap-2 md:px-3">
         <button
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold text-white/70 transition-colors hover:bg-game-red/15 hover:text-game-red focus:outline-none focus-visible:ring-2 focus-visible:ring-game-red/60"
+          className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-semibold text-white/70 transition-colors hover:bg-game-gold/15 hover:text-game-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-game-gold/60 disabled:opacity-40 md:px-3"
+          onClick={() => setArena(arena === 'table' ? 'lounge' : 'table')}
+          disabled={isRolling}
+          title={arena === 'table' ? 'Switch to the 3D tournament lounge' : 'Back to the flat table'}
+          aria-label={arena === 'table' ? 'Switch to 3D lounge view' : 'Switch to flat table view'}
+        >
+          <IconDice size={15} />
+          <span className="hidden md:inline">{arena === 'table' ? '3D Lounge' : 'Flat Table'}</span>
+        </button>
+        <div className="h-6 w-px bg-white/10" />
+        <button
+          className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-semibold text-white/70 transition-colors hover:bg-game-red/15 hover:text-game-red focus:outline-none focus-visible:ring-2 focus-visible:ring-game-red/60 md:px-3"
           onClick={leaveMatch}
           aria-label="Leave match"
         >

@@ -201,9 +201,12 @@ export function getBoostMoves(state: LudoState): MoveOption[] {
 }
 
 export function applyMove(state: LudoState, move: MoveOption): LudoState {
-  let tokens = state.tokens.map((t) =>
-    t.id === move.tokenId ? { ...t, location: move.newLocation } : { ...t }
-  );
+  // A capture retires the capturing token too — it never lands on the
+  // track cell it fought for, it's immediately taken out of play, same as
+  // finishing its own journey. Captures only ever happen on track cells, so
+  // this never conflicts with an already-home/finished destination.
+  const movedLocation: TokenLocation = move.capture ? { kind: 'finished' } : move.newLocation;
+  let tokens = state.tokens.map((t) => (t.id === move.tokenId ? { ...t, location: movedLocation } : { ...t }));
 
   if (move.capture) {
     tokens = tokens.map((t) =>
@@ -266,12 +269,14 @@ export function applyMove(state: LudoState, move: MoveOption): LudoState {
     message: allFinished
       ? `${state.players[state.currentPlayerIndex].username} wins!`
       : move.capture
-        ? `Captured ${move.capture.color} token!`
-        : turnContinues
-          ? `Moved! ${newDiceValues.length} move(s) left.`
-          : state.extraTurn
-            ? 'Bonus turn!'
-            : '',
+        ? `Captured a ${move.capture.color} token — retired undefeated!`
+        : move.newLocation.kind === 'finished'
+          ? 'Brought a token home!'
+          : turnContinues
+            ? `Moved! ${newDiceValues.length} move(s) left.`
+            : state.extraTurn
+              ? 'Bonus turn!'
+              : '',
   };
 }
 

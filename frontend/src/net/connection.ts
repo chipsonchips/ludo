@@ -17,7 +17,7 @@ export function defaultServerUrl(): string {
   const fromEnv = import.meta.env.VITE_WS_URL as string | undefined;
   if (fromEnv) return fromEnv;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${proto}://${location.hostname}:8787`;
+  return `${proto}://${location.hostname}:5100`;
 }
 
 export class GameConnection {

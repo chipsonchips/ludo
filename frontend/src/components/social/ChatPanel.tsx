@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/stores/gameStore';
 import { IconSend } from '../icons';
 
-export function ChatPanel() {
+export function ChatPanel({ className = '' }: { className?: string }) {
   const chat = useGameStore((s) => s.chat);
   const showChat = useGameStore((s) => s.showChat);
   const sendChatMessage = useGameStore((s) => s.sendChatMessage);
@@ -27,7 +27,7 @@ export function ChatPanel() {
 
   return (
     <motion.div
-      className="glass-panel flex max-h-[140px] w-full max-w-[280px] flex-col overflow-hidden shadow-xl md:max-h-[220px]"
+      className={`glass-panel flex max-h-[140px] w-full max-w-[280px] flex-col overflow-hidden shadow-xl md:max-h-[220px] ${className}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}

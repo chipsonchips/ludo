@@ -49,9 +49,11 @@ function scoreMove(state: LudoState, move: MoveOption): number {
   }
 
   if (move.capture) {
-    // Capturing an advanced token erases more of the opponent's work
+    // A capture retires the capturing token too (same value as finishing
+    // it) AND erases the opponent's progress — worth at least as much as a
+    // plain finish, more the further along the victim was.
     const victimProgress = trackProgress(move.capture) / entry;
-    score += 55 + victimProgress * 45;
+    return 1000 + victimProgress * 200;
   }
 
   if (token.location.kind === 'base') {

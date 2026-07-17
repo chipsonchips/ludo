@@ -5,7 +5,7 @@
  */
 import { create } from 'zustand';
 
-const STORAGE_KEY = 'stellardice.onboarding';
+const STORAGE_KEY = 'luduchips.onboarding';
 
 interface Flags {
   welcomeDone: boolean;

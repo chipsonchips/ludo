@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '@/stores/gameStore';
+import { formatChips } from '@/stores/chipsStore';
 import { getColorHex } from '@/ludo/boardLayout';
-import { AvatarBadge, IconHome, IconTrophy, IconUsers } from '../icons';
+import { AvatarBadge, IconChip, IconHome, IconTrophy, IconUsers } from '../icons';
 import { Button } from '../ui';
 
 export function WinnerOverlay() {
@@ -57,6 +58,23 @@ export function WinnerOverlay() {
               </span>
             </div>
             <div className="max-w-[280px] text-sm text-game-secondary">{subtitle}</div>
+            {session && session.stake > 0 && (
+              <motion.div
+                className={`flex items-center gap-2 rounded-full border px-4 py-1.5 font-display text-sm font-black tracking-wide ${
+                  winner?.kind === 'human'
+                    ? 'border-game-gold/50 bg-game-gold/15 text-game-gold shadow-[0_0_24px_rgba(246,183,60,0.3)]'
+                    : 'border-white/10 bg-white/5 text-game-secondary'
+                }`}
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.35, type: 'spring', stiffness: 300, damping: 16 }}
+              >
+                <IconChip size={16} />
+                {winner?.kind === 'human'
+                  ? `You rake the pot · +${formatChips(session.pot)} chips`
+                  : `Your ${formatChips(session.stake)}-chip buy-in goes to the house`}
+              </motion.div>
+            )}
             <div className="mt-2 flex flex-wrap justify-center gap-3">
               <Button
                 variant="primary"

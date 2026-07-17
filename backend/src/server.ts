@@ -1,16 +1,17 @@
 /**
- * StellarDice room server: a single Node process holding all live rooms in
+ * LuduChips room server: a single Node process holding all live rooms in
  * memory, speaking the shared JSON protocol over WebSockets.
  *
- *   PORT (default 8787)   HTTP health endpoint + WS upgrade on the same port
+ *   PORT (default 5100)   HTTP health endpoint + WS upgrade on the same port
  */
 import { createServer } from 'node:http';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { RoomError, RoomManager } from './rooms';
 import type { ClientMessage, ServerMessage } from '../../shared/protocol';
 
-const PORT = Number(process.env.PORT ?? 8787);
-const MAX_FRAME_BYTES = 4096;
+const PORT = Number(process.env.PORT ?? 5100);
+// Large enough for WebRTC SDP offers (voice signaling), which can run 10KB+.
+const MAX_FRAME_BYTES = 32 * 1024;
 const HEARTBEAT_MS = 30_000;
 const SWEEP_MS = 60_000;
 
@@ -39,7 +40,7 @@ wss.on('connection', (ws) => {
   alive.add(ws);
   ws.on('pong', () => alive.add(ws));
 
-  ws.on('message', (data) => {
+  ws.on('message', async (data) => {
     let msg: ClientMessage;
     try {
       msg = JSON.parse(data.toString());
@@ -55,12 +56,15 @@ wss.on('connection', (ws) => {
         case 'join_room': manager.join(ws, msg.code, msg.name, msg.avatarId); break;
         case 'rejoin': manager.rejoin(ws, msg.code, msg.playerToken); break;
         case 'set_rules': manager.setRules(ws, msg.rules); break;
+        case 'set_stake': manager.setStake(ws, msg.stake); break;
+        case 'authenticate': await manager.authenticate(ws, msg.address, msg.message, msg.signature); break;
         case 'set_ready': manager.setReady(ws, msg.ready); break;
-        case 'start_game': manager.startGame(ws); break;
+        case 'start_game': await manager.startGame(ws); break;
         case 'roll': manager.roll(ws); break;
-        case 'move': manager.move(ws, msg.tokenId); break;
+        case 'move': manager.move(ws, msg.tokenId, msg.dieValue); break;
         case 'chat': manager.chat(ws, msg.text); break;
         case 'reaction': manager.reaction(ws, msg.icon); break;
+        case 'voice_signal': manager.voiceSignal(ws, msg.signal); break;
         case 'leave': manager.leave(ws); break;
         default:
           send(ws, { t: 'error', code: 'invalid_message', message: 'Unknown message type.' });

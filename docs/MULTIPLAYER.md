@@ -1,4 +1,4 @@
-# StellarDice — Multiplayer Architecture (implemented)
+# LuduChips — Multiplayer Architecture (implemented)
 
 This documents the multiplayer system as it exists in the repo today (unlike
 `ARCHITECTURE.md`, which sketches the long-term product vision).
@@ -37,11 +37,11 @@ server because there is only one implementation.
 
 ## Game modes
 
-| Mode | Engine runs | Opponents |
-|---|---|---|
-| Single player | in the client (`gameStore`) | 1–3 bots, easy/medium/hard (`shared/ludo/ai.ts`) |
-| Local two players | in the client | second human, pass-and-play |
-| Online two players | on the server (`backend/src/game.ts`) | remote player via room invite |
+| Mode               | Engine runs                           | Opponents                                        |
+| ------------------ | ------------------------------------- | ------------------------------------------------ |
+| Single player      | in the client (`gameStore`)           | 1–3 bots, easy/medium/hard (`shared/ludo/ai.ts`) |
+| Local two players  | in the client                         | second human, pass-and-play                      |
+| Online two players | on the server (`backend/src/game.ts`) | remote player via room invite                    |
 
 In online games the client is a **dumb terminal**: it sends intents (`roll`,
 `move tokenId`) and renders whatever `game_state` the server broadcasts. Dice
@@ -63,8 +63,8 @@ create_room ──► waiting ──join_room──► lobby ──start_game─
   and pre-fills the join form.
 - **Capacity** — exactly two seats; a third join attempt gets `room_full`.
 - **Rules agreement** — only the host edits rules; any change clears both
-  ready flags, so a guest's *Ready* is always consent to the rules currently
-  shown. The host's *Start* is refused (`not_ready`) until both seats are
+  ready flags, so a guest's _Ready_ is always consent to the rules currently
+  shown. The host's _Start_ is refused (`not_ready`) until both seats are
   connected **and** ready.
 - **Rematch** — when a game ends the room drops back to `lobby` with ready
   flags cleared; the same invite keeps working.
@@ -136,7 +136,7 @@ Evaluated and deliberately rejected for this codebase:
 2. **Realtime needs a stateful socket server.** Rooms live in memory attached
    to WebSocket connections. Next's request/response and serverless model
    doesn't hold long-lived sockets — the standard workaround is running a
-   custom Node server *next to* Next, which is exactly `backend/`, minus the
+   custom Node server _next to_ Next, which is exactly `backend/`, minus the
    framework overhead.
 3. **Routing is trivial.** Four screens and one invite deep link, handled by a
    30-line hash parser; a file-system router is dead weight in a game that
@@ -153,15 +153,15 @@ code (consistent hashing at the LB) or move room state to Redis — the
 ## Running it
 
 ```bash
-# 1. Room server (ws://localhost:8787)
+# 1. Room server (ws://localhost:5100)
 cd backend && npm install && npm run dev
 
-# 2. Game client (http://localhost:5173)
+# 2. Game client (http://localhost:5000)
 cd frontend && npm install && npm run dev
 ```
 
 The client reads `VITE_WS_URL` to point at a deployed room server; it defaults
-to `ws(s)://<page-host>:8787`.
+to `ws(s)://<page-host>:5100`.
 
 ## Verification
 

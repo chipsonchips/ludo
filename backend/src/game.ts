@@ -81,11 +81,11 @@ export class ServerGame {
     return { values, state: this.state, autoPassed: false };
   }
 
-  move(seat: Seat, tokenId: string): LudoState | null {
+  move(seat: Seat, tokenId: string, dieValue?: number): LudoState | null {
     if (this.state.phase !== 'select_token' || this.currentSeat !== seat || this.state.winnerId) return null;
 
     const moves = getLegalMoves(this.state);
-    const move = moves.find((m) => m.tokenId === tokenId);
+    const move = moves.find((m) => m.tokenId === tokenId && (dieValue === undefined || m.dieValueUsed === dieValue));
     if (!move) return null;
 
     let next = applyMove(this.state, move);
